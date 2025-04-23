@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "obsidian-BIR-plugin",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Retrieve company data from official data sources via BIR Analitik service",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

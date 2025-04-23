@@ -1,16 +1,8 @@
-import { App, Editor, MarkdownView, Modal, FuzzySuggestModal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, FuzzySuggestModal, Notice, Plugin, Setting } from 'obsidian';
+import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./settings/SettingTab"
 import { requestUrl } from "obsidian";
 import { BIR, birGetByID } from './bir-tools.ts';
 
-// Remember to rename these classes and interfaces!
-
-interface BirSettings {
-	mySetting: string;
-}
-
-const DEFAULT_SETTINGS: BirSettings = {
-	mySetting: 'default'
-}
 
 export default class BirPlugin extends Plugin {
 	settings: BirSettings;
@@ -117,31 +109,6 @@ export class CompanyFindModal extends Modal {
   }
 }
 
-class BirSettingsTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
-}
 
 interface BirQuickSearch {
 	fullName: string;
@@ -194,7 +161,7 @@ export class BirQuickSelect extends FuzzySuggestModal<BirQuickSearch> {
     // el.appendChild(div);
     // div = createDiv({ text: "ИНН: " + item.item.inn });
     // el.appendChild(div);
-    el.innerHTML += `<p><small>ИНН: ${item.item.inn}&nbsp;&nbsp;ОГРН: ${item.item.ogrn}</small></p>`;
+    el.innerHTML += `<p><small class="bir_quicksrch_iteminfo">ИНН: ${item.item.inn}&nbsp;&nbsp;ОГРН: ${item.item.ogrn}</small></p>`;
   }
 
   // // Perform action on the selected suggestion.
@@ -202,4 +169,3 @@ export class BirQuickSelect extends FuzzySuggestModal<BirQuickSearch> {
   //   new Notice(`Selected ${record.shortName}`);
   // }
 }
-
