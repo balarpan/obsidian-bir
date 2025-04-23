@@ -259,8 +259,9 @@ function nextValidSibling(in_tag, incText=false) {
 async function birGetByID(birID: string): Promise<dict> {
 	const url = 'https://site.birweb.1prime.ru/company-brief/' + encodeURIComponent(birID);
 
-	// http = require('node:http');
-
+	// We use Obsidian function requestUrl to overcome CORS problem.
+	// See https://forum.obsidian.md/t/make-http-requests-from-plugins/15461/12
+	//
 	return requestUrl({url: url,cmethod: "GET"}).then(function (response) {
 		console.debug(url);
 		console.debug("got in response", response);
