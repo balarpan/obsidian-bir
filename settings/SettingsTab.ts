@@ -30,6 +30,12 @@ export class BirSettingsTab extends PluginSettingTab {
 
 		containerEl.empty();
 
+		if (!this.isTemplaterEnabled()){
+			new Setting(containerEl)
+			.setName("Не найден плагин Templater!!!")
+			.setDesc("Для работы приложения необходим уставноленный плагин. Убедитесь, что Templater активирован. При необходимости установите Templater стандартными средствами Obsidian")
+		}
+
 		new Setting(containerEl)
 			.setName('Показывать кнопку')
 			.setDesc("Нужно ли отображать на панели инструментов кнопку запуска поиска компании. После изменения потребуется перезапуск.")
@@ -44,6 +50,7 @@ export class BirSettingsTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Директория для компаний')
 			.setDesc('Директория, в которой будут создаваться заметки о компании')
+			.setTooltip('Все поля в заметке, а также теги и другие значения будут ссылаться на этот путь. Не рекомендуется менять значение при уже созданных плагином заметках.')
 			.addText(text => text
 				.setPlaceholder('укажите путь')
 				.setValue(this.plugin.settings.companiesFolder)
@@ -54,6 +61,7 @@ export class BirSettingsTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Директория для персон')
 			.setDesc('Директория, в которой будут создаваться заметки о персонах')
+			.setTooltip('Все поля в заметке, а также теги и другие значения будут ссылаться на этот путь. Не рекомендуется менять значение при уже созданных плагином заметках.')
 			.addText(text => text
 				.setPlaceholder('укажите путь')
 				.setValue(this.plugin.settings.personsFolder)
@@ -80,29 +88,31 @@ export class BirSettingsTab extends PluginSettingTab {
 					.addOption('auth', 'Авторизоваться как пользователь')
 					.setValue(this.plugin.settings.useCredentials ? 'auth' : 'guest')
 					.onChange(async(value) => {
-						this.plugin.settings.useCredentials = value == 'auth'
-						await this.plugin.saveSettings()
-						this.display() // force refresh
+						this.plugin.settings.useCredentials = (value == 'auth');
+						await this.plugin.saveSettings();
+						this.display(); // force refresh
 					})
 				}
 			)
-		new Setting(containerEl)
-			.setName('Учётная запись')
-			.setDesc('Укажите лоигн и пароль учётной записи в БИР Аналитик')
-			.addText(text => text
-				.setPlaceholder('укажите логин')
-				.setValue(this.plugin.settings.authUser)
-				.onChange(async (value) => {
-					this.plugin.settings.authUser = value;
-					await this.plugin.saveSettings();
-				}))
-			.addText(text => text
-				.setPlaceholder('укажите пароль')
-				.setValue(this.plugin.settings.authPass)
-				.onChange(async (value) => {
-					this.plugin.settings.authPass = value;
-					await this.plugin.saveSettings();
-				}));
-
+		if (this.plugin.settings.useCredentials) {
+			new Setting(containerEl)
+				.setDisabled(this.plugin.settings.useCredentials)
+				.setName('Учётная запись')
+				.setDesc('Укажите лоигн и пароль учётной записи в БИР Аналитик')
+				.addText(text => text
+					.setPlaceholder('укажите логин')
+					.setValue(this.plugin.settings.authUser)
+					.onChange(async (value) => {
+						this.plugin.settings.authUser = value;
+						await this.plugin.saveSettings();
+					}))
+				.addText(text => text
+					.setPlaceholder('укажите пароль')
+					.setValue(this.plugin.settings.authPass)
+					.onChange(async (value) => {
+						this.plugin.settings.authPass = value;
+						await this.plugin.saveSettings();
+					}));
 		}
+	}
 }

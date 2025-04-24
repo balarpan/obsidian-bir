@@ -1,5 +1,5 @@
 import { App, Editor, MarkdownView, Modal, FuzzySuggestModal, Notice, Plugin, PluginManifest, Setting } from 'obsidian';
-import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./settings/SettingTab"
+import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./settings/SettingsTab"
 import { requestUrl, PluginManifest } from "obsidian";
 import { BIR, birGetByID } from './bir-tools.ts';
 
@@ -17,17 +17,12 @@ export default class BirPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.birObj = new BIR(this.app, this);
-		// console.log("pathtempl", this.birObj.getPathToComapnyTemplate());
-		// const p = "/" + this.manifest.dir + "/templates/new_company_tpl.md"
-		// const pp = this.app.vault.adapter.read(p).then( ()=> {
-		// 	console.log("readed", pp);			
-		// });
 
 		// This creates an icon in the left ribbon.
 		if (this.settings.ribbonButton) {
-			const ribbonIconEl = this.addRibbonIcon('dice', 'Сведения о компаниях', (evt: MouseEvent) => {
+			const ribbonIconEl = this.addRibbonIcon('library', 'Сведения о компаниях', (evt: MouseEvent) => {
 				// Called when the user clicks the icon.
-				new Notice('This is a notice!');
+				new Notice('Not implemenmted yet.');
 			});
 			// Perform additional things with the ribbon
 			// ribbonIconEl.addClass('my-plugin-ribbon-class');
