@@ -1,3 +1,5 @@
+import { App, Notice, TFile, TFolder, normalizePath } from "obsidian";
+
 export class BIR {
 	readonly quickURL = 'https://svc-5024.birweb.1prime.ru/v2/QuickSearch?term=';
 	readonly companyBriefURL = 'https://site.birweb.1prime.ru/company-brief/';
@@ -7,11 +9,11 @@ export class BIR {
 		this.app = app;
 	}
 
+	/** Use native BIR quicksearch and show returned results */
 	async birSearch(searchTxt: string): Promise<array> {
 		const srchValue = searchTxt;
 		if (!srchValue.length || 2>srchValue.length ) {
-			new Notice("Укажите как минимум три символа для начала поиска!")
-			new SampleModal(this.app).open("Укажите как минимум три символа для начала поиска!");
+			new Notice("Укажите как минимум три символа для начала поиска!", 3000)
 			return [];
 		}
 
@@ -32,13 +34,52 @@ export class BIR {
 		} catch (err) {
 			console.log(err.message);
 			return [];
-		}	
-
+		}
 	}
+
+	async noteCompany_HQ(bir_id: string, folderPath: string): Promise<bool> {
+		const comp_data = await birGetByID(bir_id);
+		if (!comp_data || comp_data.constructor != Object || !Object.keys(comp_data).length) {
+			new Notice(`Ошибка при получении сведений о компании с id=${bir_id}`, 3000);
+			return false;
+		}
+		if (!this.createFolder(folderPath)) {
+			new Notice(`Ошибка создания каталога ${folderPath}!`, 3000);
+			return false;
+		}
+
+		const notePath = normalizePath(folderPath + "/" + sanitizeName(comp_data['Наименование']) + "_HQ.md");
+		console.log("notePath", notePath);
+		// const file = app.vault.getAbstractFileByPath(notePath);
+		const file = await app.vault.create(notePath, "");
+		console.log("file", file);
+	}
+
+	isFolderExits(folderPath: string): bool {
+		const vault = this.app.vault;
+		const pathCln = normalizePath(folderPath);
+		const folder = vault.getAbstractFileByPath(pathCln)
+		if (folder && (folder instanceof TFolder)) {
+			return true;
+		}
+		return false;
+	}
+
+	createFolder(folderPath: string): bool {
+		const pathCln = normalizePath(folderPath);
+		if( this.isFolderExits(pathCln) ) { return true; }
+		try {
+			this.app.vault.createFolder(pathCln);
+		} catch(err) { return false; }
+		return true;
+	} 
 
 }
 
-/** helper function for parsing HTML DOM **/
+/** prevent * " \ / < > : | ? in file name */
+function sanitizeName(t) { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_').replace(/_+/g, '_');}
+
+/** Helper function for parsing HTML DOM **/
 function nextValidSibling(in_tag, incText=false) {
 	//incText - do we detect Text Nodes too
 	let acpType = incText ? [1,3] : [1];
@@ -52,7 +93,11 @@ function nextValidSibling(in_tag, incText=false) {
 }
 
 
-/** Get Company info from BIR according to provided ID **/
+/**
+ * Get Company info from BIR according to provided ID
+ * @param  {string} birID - id of Company record in BIR Service
+ * @return {Promise<dict>}
+ */
 export async function birGetByID(birID: string): Promise<dict> {
 	const url = 'https://site.birweb.1prime.ru/company-brief/' + encodeURIComponent(birID);
 
@@ -60,8 +105,6 @@ export async function birGetByID(birID: string): Promise<dict> {
 	// See https://forum.obsidian.md/t/make-http-requests-from-plugins/15461/12
 	//
 	return requestUrl({url: url,cmethod: "GET"}).then(function (response) {
-		console.debug(url);
-		console.debug("got in response", response);
 		return response.text;
 	}).then(function (html: string) {
 		// Convert the HTML string into a document object

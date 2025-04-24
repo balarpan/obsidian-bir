@@ -6,9 +6,12 @@ import { BIR, birGetByID } from './bir-tools.ts';
 
 export default class BirPlugin extends Plugin {
 	settings: BirSettings;
+	birObj: BIR;
 
+	get plugin_is_enabled() { return this.app?.plugins?.enabledPlugins?.has("bir-analitik-plugin"); }
 	async onload() {
 		await this.loadSettings();
+		this.birObj = new BIR(this.app);
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
@@ -28,7 +31,7 @@ export default class BirPlugin extends Plugin {
 			name: 'Find company',
 			callback: () => {
 				new CompanyFindModal(this.app, (result) => {
-					const res = new BIR(this.app).birSearch(result)
+					const res = this.birObj.birSearch(result)
 					res.then((found) => {
 						if (!found.length) {
 							new Notice("Ничего не найдено", 3000);
@@ -38,9 +41,10 @@ export default class BirPlugin extends Plugin {
 						new BirQuickSelect(this.app, found, (selected) => {
 							console.log("selected", selected);
 
-							birGetByID(selected.id).then( (birdata) => {
-								console.log("got!", birdata);
-							});
+							// birGetByID(selected.id).then( (birdata) => {
+							// 	console.log("got!", birdata);
+							// });
+							this.birObj.noteCompany_HQ(selected.id, this.settings.companiesFolder);
 						}).open();
 
 					})
@@ -66,6 +70,7 @@ export default class BirPlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+
 }
 
 class SampleModal extends Modal {
@@ -92,6 +97,7 @@ export class CompanyFindModal extends Modal {
 	let name = '';
     new Setting(this.contentEl)
       .setName('Название компании, ИНН, ОГРН, ...')
+      .setDesc('Введеите минимум три символа для поиска.')
       .addText((text) =>
         text.onChange((value) => {
           name = value;
