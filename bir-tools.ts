@@ -1,12 +1,13 @@
-import { App, Notice, TFile, TFolder, normalizePath } from "obsidian";
+import { App, Notice, TFile, TFolder, normalizePath, PluginManifest, DataAdapter } from "obsidian";
 
 export class BIR {
 	readonly quickURL = 'https://svc-5024.birweb.1prime.ru/v2/QuickSearch?term=';
 	readonly companyBriefURL = 'https://site.birweb.1prime.ru/company-brief/';
 	// readonly http = require('https');
 
-	constructor(app: App) {
+	constructor(app: App, birPlugin: BirPlugin) {
 		this.app = app;
+		this.myPlugin = birPlugin;
 	}
 
 	/** Use native BIR quicksearch and show returned results */
@@ -48,14 +49,17 @@ export class BIR {
 			return false;
 		}
 
-		const notePath = normalizePath(folderPath + "/" + sanitizeName(comp_data['Наименование']) + "_HQ.md");
-		console.log("notePath", notePath);
+		const cname = comp_data['Наименование'].replace(/^(АО |ООО )/g, '');
+		const subFolder = folderPath + "/Россия";
+		this.createFolder(subFolder);
+		const notePath = normalizePath(subFolder + "/" + sanitizeName(cname + "_HQ") + ".md");
 		// const file = app.vault.getAbstractFileByPath(notePath);
 		const file = await app.vault.create(notePath, "");
 		console.log("file", file);
+		this.runCompanyTemplate(file, comp_data);
 	}
 
-	isFolderExits(folderPath: string): bool {
+	isFolderExists(folderPath: string): bool {
 		const vault = this.app.vault;
 		const pathCln = normalizePath(folderPath);
 		const folder = vault.getAbstractFileByPath(pathCln)
@@ -67,17 +71,111 @@ export class BIR {
 
 	createFolder(folderPath: string): bool {
 		const pathCln = normalizePath(folderPath);
-		if( this.isFolderExits(pathCln) ) { return true; }
+		if( this.isFolderExists(pathCln) ) { return true; }
 		try {
 			this.app.vault.createFolder(pathCln);
 		} catch(err) { return false; }
 		return true;
-	} 
+	}
+
+	private isTemplaterEnabled(): bool {return this.app?.plugins?.enabledPlugins?.has("templater-obsidian");}
+	private getTemplater() {
+		const plugObj = this.app.plugins.plugins["templater-obsidian"];
+		if (!plugObj)
+			return undefined;
+		//@ts-ignore
+		return plugObj?.templater;
+	}
+
+	/** run Templater plugin and return result as a string */
+	async runTemplater(templateStr: string, dstFile: TFile): string {
+		const templater = this.getTemplater();
+		if (!templater) return '';
+
+		return await (
+			//@ts-ignore
+			templater as {
+				parse_template: (
+					opt: { target_file: TFile; run_mode: number },
+					content: string
+				) => Promise<string>;
+			}
+		).parse_template({ target_file: dstFile, run_mode: 4 }, templateStr);
+	}
+
+	public getPathToComapnyTemplate(): string {
+		const path = "/" + this.myPlugin.manifest.dir + "/templates/new_company_tpl.md";
+		return path;
+		return normalizePath(
+				// this.app.vault.adapter.basePath +
+				"/" + this.myPlugin.manifest.dir + 
+				// "/.obsidian/plugins/obsidian-bir" +
+				"/templates/new_company_tpl.md"
+		);
+	}
+
+	async runCompanyTemplate(noteFile: TFile, compData: dict): Promise<bool> {
+		console.log("data", compData);
+		if (!this.isTemplaterEnabled()) {
+			new Notice("Для использования шаблонов необходим установленный и запущенный Templater!", 3000);
+			return false;
+		}
+		const tplHeader = "<%*\n-%>";
+		const templatePath = this.getPathToComapnyTemplate();
+		const self = this;
+		this.app.vault.adapter.read(templatePath).then( async (tplContent) => {
+			if (!tplContent.length) {
+				new Notice("Ошибка чтения файла шаблона!", 3000);
+				console.log("Ошибка чтения шаблона", templatePath);
+			} else {
+				const tplContentPack = self.getCompanyTplHeader(compData) + tplContent;
+				let modified = await self.runTemplater(tplContentPack, noteFile);
+				if (compData['сайт'] && compData['сайт'].length) {
+					modified = modified.replace('Официальный сайт: ', `Официальный сайт: https://${compData['сайт'].trim()}/`);
+				}
+				modified += "\n\n## Детальные сведения об организации\n" + Object.entries(compData).map(([key, value]) => `**${key}**:: ${value}`).join('\n')
+				await self.app.vault.modify(noteFile, modified);
+				console.log("done with", noteFile);
+
+				return true;
+			}
+		});
+
+		// const tplFile = this.app.vault.getAbstractFileByPath(templatePath);
+		// if (!tplFile || !(tplFile instanceof TFile)) {
+		// 	new Notice("Ошибка чтения файла шаблона!", 3000);
+		// 	console.log("Ошибка шаблона", templatePath, tplFile);
+		// 	console.log(this.app.vault.configDir)
+		// 	return false;
+		// }
+		// const tplContent = await this.app.vault.read(tplFile);
+		//Launch Templater plugin on our own template file and get result as string
+		// const modified = await this.runTemplater(tplContent, noteFile);
+		// await this.app.vault.modify(noteFile, modified);
+	}
+
+	getCompanyTplHeader(compData: dict): string {
+		const name = compData['Наименование'].replace(/^(АО |ООО )/g, '').replaceAll('"', '');
+		let ret: string = `<%*
+function sanitizeName(t) { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_').replace(/_+/g, '_');}
+var pname = "${name}";
+const pnameCln = sanitizeName(pname);
+var country = "Россия";
+const titleName = pnameCln + "_HQ";
+const tagsString =  country ? "Company/" + country + "/" + pnameCln  : "Company/" + pnameCln;`;
+		ret += "\n-%>";
+		return ret;
+		}
 
 }
 
-/** prevent * " \ / < > : | ? in file name */
-function sanitizeName(t) { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_').replace(/_+/g, '_');}
+/** prevent * " \ / < > : | ? in file name*/
+function sanitizeName(t) {
+	return t.replaceAll(" ","_")
+		.replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_')
+		.replace(/^_+/g, '')
+		.replace(/_+/g, '_');
+}
 
 /** Helper function for parsing HTML DOM **/
 function nextValidSibling(in_tag, incText=false) {

@@ -1,25 +1,37 @@
-import { App, Editor, MarkdownView, Modal, FuzzySuggestModal, Notice, Plugin, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, FuzzySuggestModal, Notice, Plugin, PluginManifest, Setting } from 'obsidian';
 import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./settings/SettingTab"
-import { requestUrl } from "obsidian";
+import { requestUrl, PluginManifest } from "obsidian";
 import { BIR, birGetByID } from './bir-tools.ts';
-
 
 export default class BirPlugin extends Plugin {
 	settings: BirSettings;
 	birObj: BIR;
+	public manifest: PluginManifest;
 
-	get plugin_is_enabled() { return this.app?.plugins?.enabledPlugins?.has("bir-analitik-plugin"); }
+	constructor(app: App, manifest: PluginManifest) {
+		super(app, manifest);
+		this.manifest = manifest;
+	}
+
+	get plugin_is_enabled() { return this.app?.plugins?.enabledPlugins?.has(this.manifest.id); }
 	async onload() {
 		await this.loadSettings();
-		this.birObj = new BIR(this.app);
+		this.birObj = new BIR(this.app, this);
+		// console.log("pathtempl", this.birObj.getPathToComapnyTemplate());
+		// const p = "/" + this.manifest.dir + "/templates/new_company_tpl.md"
+		// const pp = this.app.vault.adapter.read(p).then( ()=> {
+		// 	console.log("readed", pp);			
+		// });
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+		if (this.settings.ribbonButton) {
+			const ribbonIconEl = this.addRibbonIcon('dice', 'Сведения о компаниях', (evt: MouseEvent) => {
+				// Called when the user clicks the icon.
+				new Notice('This is a notice!');
+			});
+			// Perform additional things with the ribbon
+			// ribbonIconEl.addClass('my-plugin-ribbon-class');
+		}
 
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();

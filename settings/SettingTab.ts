@@ -10,22 +10,37 @@ export const DEFAULT_SETTINGS: BirSettings = {
 	openAfterCreation: true,
 	useCredentials: false,
 	authUser: '',
-	authPass: ''
+	authPass: '',
+	ribbonButton: false
 }
 
 export class BirSettingsTab extends PluginSettingTab {
 	plugin: MyPlugin;
+	app: App;
 
 	constructor(app: App, plugin: MyPlugin) {
 		super(app, plugin);
+		this.app = app;
 		this.plugin = plugin;
 	}
 
+	isTemplaterEnabled(): bool {return this.app?.plugins?.enabledPlugins?.has("templater-obsidian");}
 	display(): void {
 		const {containerEl} = this;
 
 		containerEl.empty();
 
+		new Setting(containerEl)
+			.setName('Показывать кнопку')
+			.setDesc("Нужно ли отображать на панели инструментов кнопку запуска поиска компании. После изменения потребуется перезапуск.")
+			.addToggle(component => component
+				.setValue(this.plugin.settings.ribbonButton)
+				.onChange(async value => {
+						this.plugin.settings.ribbonButton = value
+						await this.plugin.saveSettings()
+					}
+				)
+			)
 		new Setting(containerEl)
 			.setName('Директория для компаний')
 			.setDesc('Директория, в которой будут создаваться заметки о компании')
