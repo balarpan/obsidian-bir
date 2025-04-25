@@ -37,7 +37,7 @@ export class BirSettingsTab extends PluginSettingTab {
 		}
 
 		new Setting(containerEl)
-			.setName('Показывать кнопку')
+			.setName('Кнопка на панели инструментов')
 			.setDesc("Нужно ли отображать на панели инструментов кнопку запуска поиска компании. После изменения потребуется перезапуск.")
 			.addToggle(component => component
 				.setValue(this.plugin.settings.ribbonButton)

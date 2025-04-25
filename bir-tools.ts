@@ -57,7 +57,8 @@ export class BIR {
 		// const file = app.vault.getAbstractFileByPath(notePath);
 		const file = await app.vault.create(notePath, "");
 		console.log("file", file);
-		this.runCompanyTemplate(file, comp_data);
+		const res = this.runCompanyTemplate(file, comp_data);
+		if (res) { new Notice(`Создано для ${cname}`, 3000); }
 	}
 
 	isFolderExists(folderPath: string): bool {
@@ -144,20 +145,20 @@ export class BIR {
 				let okved = '';
 				function okvedPrint(obj) { return obj.map(function(e, i){return '- ' + e[0] + ' - ' + e[1]}).join('\n');}
 				if (compData['ОКВЭД']) {
-					okved += compData['ОКВЭД']['Основной'] ? "\nОсновной\n" + okvedPrint(compData['ОКВЭД']['Основной']) : '';
-					okved += compData['ОКВЭД']['Дополнительные'] ? "\nДополнительный\n" + okvedPrint(compData['ОКВЭД']['Дополнительные']) : '';
+					okved += compData['ОКВЭД']['Основной'] ? "\n**Основной**\n" + okvedPrint(compData['ОКВЭД']['Основной']) : '';
+					okved += compData['ОКВЭД']['Дополнительные'] ? "\n**Дополнительный**\n" + okvedPrint(compData['ОКВЭД']['Дополнительные']) : '';
 				}
-				const notallowed = ['ОКВЭД', 'ИНН', 'ОГРН', 'ОКПО', 'Статус_bool'];
+				const notallowed = ['ОКВЭД', 'ИНН', 'ОГРН', 'ОКПО', 'Статус_bool', 'Благонадежность', 'Кредитоспособность'];
 				let data2 = Object(compData);
 				data2 = Object.keys(compData)
 				.filter(key => !notallowed.includes(key))
 				.reduce((obj, key) => { obj[key] = data2[key]; return obj;
 				}, {});
 
-				modified += "\n\n## Детальные сведения об организации\n";
+				modified += "\n\n## Детальные сведения об организации\n\n";
 				modified += ['ИНН', 'ОГРН', 'ОКПО'].map((key) => {
 					return key in compData ? `**${key}**:: ${compData[key]} ` : '';
-				}).join(' ') + '\n';
+				}).join(' ') + '\n\n';
 				modified += Object.entries(data2).map(([key, value]) => `**${key}**:: ${value}`).join('\n');
 				modified += okved.length ? '\n### ОКВЭД\n' + okved + '\n' : '';
 				await self.app.vault.modify(noteFile, modified);

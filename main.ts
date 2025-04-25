@@ -5,7 +5,7 @@ import { BIR, birGetByID } from './bir-tools.ts';
 
 export default class BirPlugin extends Plugin {
 	settings: BirSettings;
-	birObj: BIR;
+	private birObj: BIR;
 	public manifest: PluginManifest;
 
 	constructor(app: App, manifest: PluginManifest) {
@@ -34,29 +34,9 @@ export default class BirPlugin extends Plugin {
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'BIR-find-company',
-			name: 'Find company',
-			callback: () => {
-				new CompanyFindModal(this.app, (result) => {
-					const res = this.birObj.birSearch(result)
-					res.then((found) => {
-						if (!found.length) {
-							new Notice("Ничего не найдено", 3000);
-							return;
-						}
-
-						new BirQuickSelect(this.app, found, (selected) => {
-							console.log("selected", selected);
-
-							// birGetByID(selected.id).then( (birdata) => {
-							// 	console.log("got!", birdata);
-							// });
-							this.birObj.noteCompany_HQ(selected.id, this.settings.companiesFolder);
-						}).open();
-
-					})
-				}).open();
-			}
+			id: 'BIR-find-add-company',
+			name: 'Найти и добавить компанию',
+			callback: this.findCreateCompany
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
@@ -64,6 +44,28 @@ export default class BirPlugin extends Plugin {
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 		// this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+	}
+
+	/** Opens a dialog to search for a company in external sources and create a note */
+	findCreateCompany() {
+		new CompanyFindModal(this.app, (result) => {
+			const res = this.birObj.birSearch(result)
+			res.then((found) => {
+				if (!found.length) {
+					new Notice("Ничего не найдено", 3000);
+					return;
+				}
+
+				new BirQuickSelect(this.app, found, (selected) => {
+					// birGetByID(selected.id).then( (birdata) => {
+					// 	console.log("got!", birdata);
+					// });
+					this.birObj.noteCompany_HQ(selected.id, this.settings.companiesFolder);
+				}).open();
+
+			})
+		}).open();
+		}
 	}
 
 	onunload() {
