@@ -59,6 +59,11 @@ export class BIR {
 		console.log("file", file);
 		const res = this.runCompanyTemplate(file, comp_data);
 		if (res) { new Notice(`Создано для ${cname}`, 3000); }
+
+		//Open in active view
+		const active_leaf = this.app.workspace.getLeaf(false);
+		if (!active_leaf) { return; }
+		await active_leaf.openFile(file, {state: { mode: "source" }, });
 	}
 
 	isFolderExists(folderPath: string): bool {
@@ -160,7 +165,7 @@ export class BIR {
 					return key in compData ? `**${key}**:: ${compData[key]} ` : '';
 				}).join(' ') + '\n\n';
 				modified += Object.entries(data2).map(([key, value]) => `**${key}**:: ${value}`).join('\n');
-				modified += okved.length ? '\n### ОКВЭД\n' + okved + '\n' : '';
+				modified += okved.length ? '\n\n### ОКВЭД\n' + okved + '\n' : '';
 				await self.app.vault.modify(noteFile, modified);
 
 				return true;

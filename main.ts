@@ -32,11 +32,10 @@ export default class BirPlugin extends Plugin {
 		const statusBarItemEl = this.addStatusBarItem();
 		statusBarItemEl.setText('Status Bar Text');
 
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: 'BIR-find-add-company',
 			name: 'Найти и добавить компанию',
-			callback: this.findCreateCompany
+			callback: () => {this.findCreateCompany();},
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
@@ -47,7 +46,7 @@ export default class BirPlugin extends Plugin {
 	}
 
 	/** Opens a dialog to search for a company in external sources and create a note */
-	findCreateCompany() {
+	async findCreateCompany() {
 		new CompanyFindModal(this.app, (result) => {
 			const res = this.birObj.birSearch(result)
 			res.then((found) => {
@@ -153,8 +152,6 @@ export class BirQuickSelect extends FuzzySuggestModal<BirQuickSearch> {
 	}
 
 	onChooseItem(record: BirQuickSearch, evt: MouseEvent | KeyboardEvent) {
-		// this.close();
-		new Notice(`Selected ${record.shortName}`);
 		if (this.readyCallback) { this.readyCallback(record); };
 	}
 

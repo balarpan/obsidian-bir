@@ -31,9 +31,14 @@ export class BirSettingsTab extends PluginSettingTab {
 		containerEl.empty();
 
 		if (!this.isTemplaterEnabled()){
-			new Setting(containerEl)
+			const s = new Setting(containerEl)
 			.setName("Не найден плагин Templater!!!")
-			.setDesc("Для работы приложения необходим уставноленный плагин. Убедитесь, что Templater активирован. При необходимости установите Templater стандартными средствами Obsidian")
+			.setDesc("Для работы приложения необходим уставноленный плагин. Убедитесь, что Templater активирован. При необходимости установите Templater стандартными средствами Obsidian");
+
+			const a = document.createElement("a");
+			a.setAttribute("href", "https://github.com/SilentVoid13/Templater/");
+			a.textContent = "https://github.com/SilentVoid13/Templater/";
+			s.settingEl.appendChild(a);
 		}
 
 		new Setting(containerEl)
