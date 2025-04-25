@@ -22,7 +22,7 @@ export default class BirPlugin extends Plugin {
 		if (this.settings.ribbonButton) {
 			const ribbonIconEl = this.addRibbonIcon('library', 'Сведения о компаниях', (evt: MouseEvent) => {
 				// Called when the user clicks the icon.
-				new Notice('Not implemenmted yet.');
+				this.findCreateCompany();
 			});
 			// Perform additional things with the ribbon
 			// ribbonIconEl.addClass('my-plugin-ribbon-class');
@@ -65,7 +65,6 @@ export default class BirPlugin extends Plugin {
 
 			})
 		}).open();
-		}
 	}
 
 	onunload() {
