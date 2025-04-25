@@ -38,21 +38,22 @@ export class BIR {
 		}
 	}
 
-	async noteCompany_HQ(bir_id: string, folderPath: string): Promise<bool> {
+	async noteCompany_HQ(bir_id: string, insideFolderPath: string): Promise<bool> {
 		const comp_data = await birGetByID(bir_id);
 		if (!comp_data || comp_data.constructor != Object || !Object.keys(comp_data).length) {
 			new Notice(`Ошибка при получении сведений о компании с id=${bir_id}`, 3000);
 			return false;
 		}
+
+		const cname = comp_data['Наименование'].replace(/^(АО |ООО )/g, '');
+		const folderPath = insideFolderPath + "/Россия/" + sanitizeName(cname);
 		if (!this.createFolder(folderPath)) {
 			new Notice(`Ошибка создания каталога ${folderPath}!`, 3000);
 			return false;
 		}
-
-		const cname = comp_data['Наименование'].replace(/^(АО |ООО )/g, '');
-		const subFolder = folderPath + "/Россия";
-		this.createFolder(subFolder);
-		const notePath = normalizePath(subFolder + "/" + sanitizeName(cname + "_HQ") + ".md");
+		this.createFolder(folderPath + "/docs/" + moment().format("YYYY"));
+		this.createFolder(folderPath + "/_media");
+		const notePath = normalizePath(folderPath + "/" + sanitizeName(cname + "_HQ") + ".md");
 		// const file = app.vault.getAbstractFileByPath(notePath);
 		const file = await app.vault.create(notePath, "");
 		console.log("file", file);
@@ -69,8 +70,14 @@ export class BIR {
 		return false;
 	}
 
+	/** Create folder by path. If intermediate folders do not exist, they will also be created. */
 	createFolder(folderPath: string): bool {
-		const pathCln = normalizePath(folderPath);
+		const pathArr = normalizePath(folderPath).split('/');
+		const pathParent = pathArr.slice(0, -1).join('/');
+		if (pathParent.length && !this.isFolderExists(pathParent)) {
+			this.createFolder(pathParent);
+		}
+		const pathCln = normalizePath(pathArr.join('/'));
 		if( this.isFolderExists(pathCln) ) { return true; }
 		try {
 			this.app.vault.createFolder(pathCln);
@@ -115,7 +122,7 @@ export class BIR {
 	}
 
 	async runCompanyTemplate(noteFile: TFile, compData: dict): Promise<bool> {
-		console.log("data", compData);
+		console.log("data for template", compData);
 		if (!this.isTemplaterEnabled()) {
 			new Notice("Для использования шаблонов необходим установленный и запущенный Templater!", 3000);
 			return false;
@@ -133,9 +140,27 @@ export class BIR {
 				if (compData['сайт'] && compData['сайт'].length) {
 					modified = modified.replace('Официальный сайт: ', `Официальный сайт: https://${compData['сайт'].trim()}/`);
 				}
-				modified += "\n\n## Детальные сведения об организации\n" + Object.entries(compData).map(([key, value]) => `**${key}**:: ${value}`).join('\n')
+
+				let okved = '';
+				function okvedPrint(obj) { return obj.map(function(e, i){return '- ' + e[0] + ' - ' + e[1]}).join('\n');}
+				if (compData['ОКВЭД']) {
+					okved += compData['ОКВЭД']['Основной'] ? "\nОсновной\n" + okvedPrint(compData['ОКВЭД']['Основной']) : '';
+					okved += compData['ОКВЭД']['Дополнительные'] ? "\nДополнительный\n" + okvedPrint(compData['ОКВЭД']['Дополнительные']) : '';
+				}
+				const notallowed = ['ОКВЭД', 'ИНН', 'ОГРН', 'ОКПО', 'Статус_bool'];
+				let data2 = Object(compData);
+				data2 = Object.keys(compData)
+				.filter(key => !notallowed.includes(key))
+				.reduce((obj, key) => { obj[key] = data2[key]; return obj;
+				}, {});
+
+				modified += "\n\n## Детальные сведения об организации\n";
+				modified += ['ИНН', 'ОГРН', 'ОКПО'].map((key) => {
+					return key in compData ? `**${key}**:: ${compData[key]} ` : '';
+				}).join(' ') + '\n';
+				modified += Object.entries(data2).map(([key, value]) => `**${key}**:: ${value}`).join('\n');
+				modified += okved.length ? '\n### ОКВЭД\n' + okved + '\n' : '';
 				await self.app.vault.modify(noteFile, modified);
-				console.log("done with", noteFile);
 
 				return true;
 			}
@@ -162,6 +187,10 @@ var pname = "${name}";
 const pnameCln = sanitizeName(pname);
 var country = "Россия";
 const titleName = pnameCln + "_HQ";
+const shortName = "${compData['Наименование'].replaceAll('"','\\\"')}";
+const fullNameTitle = "${compData['Полное наименование'].replaceAll('"','\\\"')}";
+const companyAddress = "${compData['Адрес'] ? compData['Адрес'].replaceAll('"','\\\"') : ''}";
+const companyStatus = "${compData['Статус'] ? compData['Статус'].replaceAll('"','\\\"') : ''}";
 const tagsString =  country ? "Company/" + country + "/" + pnameCln  : "Company/" + pnameCln;`;
 		ret += "\n-%>";
 		return ret;
@@ -174,6 +203,7 @@ function sanitizeName(t) {
 	return t.replaceAll(" ","_")
 		.replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_')
 		.replace(/^_+/g, '')
+		.replace(/_+$/g, '')
 		.replace(/_+/g, '_');
 }
 
@@ -284,7 +314,7 @@ export async function birGetByID(birID: string): Promise<dict> {
 		let okved = {'Основной':[], 'Дополнительные':[]};
 		let okved_main = dsec.ownerDocument.evaluate("//header[text()='Основной']", dsec, null, XPathResult.ANY_TYPE, null ).iterateNext();
 		if (okved_main) {
-			okved['Основной'] = [okved_main.nextElementSibling.textContent, okved_main.nextElementSibling.nextElementSibling.textContent]
+			okved['Основной'] = [[okved_main.nextElementSibling.textContent, okved_main.nextElementSibling.nextElementSibling.textContent]];
 		}
 		let okved_dop = dsec.ownerDocument.evaluate("//header[text()='Дополнительные']", dsec, null, XPathResult.ANY_TYPE, null ).iterateNext();
 		if (okved_dop) {

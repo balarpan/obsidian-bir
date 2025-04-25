@@ -9,10 +9,17 @@ parentCompany:
 record_type: company_HQ
 ---
 
-# <% pname %>
+# <% shortName %>
+
 Официальный сайт: 
+
 ## Краткое описание
+<% fullNameTitle %>
+*<% companyAddress %>*
+<% companyStatus.startsWith("Действующая") ?  companyStatus : '=='+companyStatus+'=='  %>
+
 ## Центральный аппарат
+
 ## 📇Подчинённые компании
 ```dataviewjs
 dv.table(["Компания", "страна"], dv.pages('"Companies"').where(p => dv.func.contains(p.parentCompany,dv.current().file.link))
