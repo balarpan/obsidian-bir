@@ -14,6 +14,8 @@
 }
 
 .bir_quicksrch_iteminfo_address {
-  color: var(--color-orange);
+/*  color: var(--color-orange);*/
+/*  color: var(--text-accent-hover);*/
+  color: var(--text-warning);
   line-height: var(--line-height-tight);
 }

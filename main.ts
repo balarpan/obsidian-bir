@@ -161,22 +161,22 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 	}
 
 	getSuggestions(query: string): ButtonModalCmd[] {
-	  return this.commands.filter((cmd) =>
-	    cmd.name.includes(query.toLowerCase())
-	  );
+		return this.commands.filter((cmd) =>
+			cmd.name.includes(query.toLowerCase())
+		);
 	}
 
-  renderSuggestion(cmd: string, el: HTMLElement) {
-    el.createEl('div', { text: cmd.name });
-    if ( cmd.desc && cmd.desc.trim().length ) el.createEl('small', { text: cmd.desc.trim(), cls: 'bir_mainbtn_iteminfo' });
-  }
+	renderSuggestion(cmd: string, el: HTMLElement) {
+		el.createEl('div', { text: cmd.name });
+		if ( cmd.desc && cmd.desc.trim().length ) el.createEl('small', { text: cmd.desc.trim(), cls: 'bir_mainbtn_iteminfo' });
+	}
 
-  onChooseSuggestion(cmd: string, evt: MouseEvent | KeyboardEvent) {
-  	if ( cmd.callback )
-  		cmd.callback();
-  	// this.myPlugin.findCreateCompany();
-    new Notice(`Selected ${cmd.name}`);
-  }
+	onChooseSuggestion(cmd: string, evt: MouseEvent | KeyboardEvent) {
+		if ( cmd.callback )
+			cmd.callback();
+		// this.myPlugin.findCreateCompany();
+		new Notice(`Selected ${cmd.name}`);
+	}
 
 	getCommands(): string[] {
 		const plg = this.myPlugin
@@ -192,29 +192,49 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 }
 
 export class CompanyFindModal extends Modal {
-  constructor(app: App, onSubmit: (result: string) => void) {
-    super(app);
-	this.setTitle('БИР Аналитик. Поиск организации.');
+	constructor(app: App, onSubmit: (result: string) => void) {
+		super(app);
+		this.setTitle('БИР Аналитик. Поиск организации.');
 
-	let name = '';
-    new Setting(this.contentEl)
-      .setName('Название компании, ИНН, ОГРН, ...')
-      .setDesc('Введеите минимум три символа для поиска.')
-      .addText((text) =>
-        text.onChange((value) => {
-          name = value;
-        }));
+		let name = '';
+		let runBtn;
+		new Setting(this.contentEl)
+			.setName('Название компании, ИНН, ОГРН, ...')
+			.setDesc('Введеите минимум три символа для поиска.');
 
-    new Setting(this.contentEl)
-      .addButton((btn) =>
-        btn
-          .setButtonText('Найти')
-          .setCta()
-          .onClick(() => {
-            this.close();
-            onSubmit(name);
-          }));
-  }
+		const inputFld = document.createElement("input");
+		inputFld.type = "text"; inputFld.style.width = "100%";
+		inputFld.value = name;
+		inputFld.addEventListener("keyup", function(e) {
+			if (e.key === "Enter" && name.length > 2) {
+				this.close();
+				onSubmit(name);
+			}
+			name = inputFld.value;
+			if (runBtn) runBtn.setDisabled(name.length < 3);
+		}.bind(this));
+		this.contentEl.appendChild( inputFld );
+
+		runBtn = new Setting(this.contentEl)
+			.addButton((btn) =>
+				btn
+					.setButtonText('Найти')
+					.setCta()
+					.setDisabled(name.length < 3)
+					.onClick(() => {
+						this.close();
+						onSubmit(name);
+					}));
+		
+		// handle <Enter> key
+		// this.scope.register([], 'Enter', () => {
+		//    if ( name.lenght > 2 ) {
+		//    	this.close();
+		//    	new Notice("!!!\n" + name);
+		//    	onSubmit(name);
+		//    }
+		// });
+	}
 }
 
 
@@ -257,22 +277,22 @@ export class BirQuickSelect extends FuzzySuggestModal<BirQuickSearch> {
 	// );
 	// }
 
-  // // Renders each suggestion item.
-  renderSuggestion(item: FuzzyMatch<BirQuickSearch>, el: HTMLElement) {
-    super.renderSuggestion(item, el);
+	// // Renders each suggestion item.
+	renderSuggestion(item: FuzzyMatch<BirQuickSearch>, el: HTMLElement) {
+		super.renderSuggestion(item, el);
 
-    // el.createEl('div', { text: item.item.shortName });
-    // let div;
-    // div = createDiv({ text: item.item.shortName });
-    // el.appendChild(div);
-    // div = createDiv({ text: "ИНН: " + item.item.inn });
-    // el.appendChild(div);
-    el.innerHTML += `<p class="bir_quicksrch_iteminfo"><small>ИНН: ${item.item.inn}&nbsp;&nbsp;ОГРН: ${item.item.ogrn}</small></p>`;
-    el.innerHTML += (item.item.address && item.item.address.length) ? `<p class="bir_quicksrch_iteminfo_address"><small>${item.item.address}</small></p>` : '';
-  }
+		// el.createEl('div', { text: item.item.shortName });
+		// let div;
+		// div = createDiv({ text: item.item.shortName });
+		// el.appendChild(div);
+		// div = createDiv({ text: "ИНН: " + item.item.inn });
+		// el.appendChild(div);
+		el.innerHTML += `<p class="bir_quicksrch_iteminfo"><small>ИНН: ${item.item.inn}&nbsp;&nbsp;ОГРН: ${item.item.ogrn}</small></p>`;
+		el.innerHTML += (item.item.address && item.item.address.length) ? `<p class="bir_quicksrch_iteminfo_address"><small>${item.item.address}</small></p>` : '';
+	}
 
-  // // Perform action on the selected suggestion.
-  // onChooseSuggestion(record: BirQuickSearch, evt: MouseEvent | KeyboardEvent) {
-  //   new Notice(`Selected ${record.shortName}`);
-  // }
+	// // Perform action on the selected suggestion.
+	// onChooseSuggestion(record: BirQuickSearch, evt: MouseEvent | KeyboardEvent) {
+	//   new Notice(`Selected ${record.shortName}`);
+	// }
 }
