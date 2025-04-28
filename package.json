@@ -1,6 +1,6 @@
 {
-	"name": "obsidian-BIR-plugin",
-	"version": "1.0.0",
+	"name": "obsidian-BIR",
+	"version": "0.1.1",
 	"description": "Retrieve company data from official data sources via BIR Analitik service",
 	"main": "main.js",
 	"scripts": {

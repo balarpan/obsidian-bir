@@ -1,9 +1,9 @@
 import { App, Editor, MarkdownView, Modal, FuzzySuggestModal, Notice, Plugin, PluginManifest, Setting } from 'obsidian';
-import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./settings/SettingsTab"
+import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./src/settings/SettingsTab"
 import { requestUrl, PluginManifest } from "obsidian";
-import { BIR, birGetByID } from './bir-tools.ts';
-import { Person } from './person.ts';
-import { Product } from './product.ts';
+import { BIR, birGetByID } from './src/bir-tools.ts';
+import { Person } from './src/person.ts';
+import { Product } from './src/product.ts';
 
 export default class BirPlugin extends Plugin {
 	settings: BirSettings;
