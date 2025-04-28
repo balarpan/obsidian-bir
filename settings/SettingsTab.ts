@@ -7,7 +7,10 @@ interface BirSettings {
 export const DEFAULT_SETTINGS: BirSettings = {
 	companiesFolder: '/Companies',
 	personsFolder: '/Persons',
+	productsFolder: '/Products',
+	projectsFolder: '/Projects',
 	openAfterCreation: true,
+	extServiceName: 'БИР Аналитик',
 	useCredentials: false,
 	authUser: '',
 	authPass: '',
@@ -39,6 +42,8 @@ export class BirSettingsTab extends PluginSettingTab {
 			a.setAttribute("href", "https://github.com/SilentVoid13/Templater/");
 			a.textContent = "https://github.com/SilentVoid13/Templater/";
 			s.settingEl.appendChild(a);
+
+			return;
 		}
 
 		new Setting(containerEl)
@@ -52,28 +57,28 @@ export class BirSettingsTab extends PluginSettingTab {
 					}
 				)
 			)
-		new Setting(containerEl)
-			.setName('Директория для компаний')
-			.setDesc('Директория, в которой будут создаваться заметки о компании')
-			.setTooltip('Все поля в заметке, а также теги и другие значения будут ссылаться на этот путь. Не рекомендуется менять значение при уже созданных плагином заметках.')
-			.addText(text => text
-				.setPlaceholder('укажите путь')
-				.setValue(this.plugin.settings.companiesFolder)
-				.onChange(async (value) => {
-					this.plugin.settings.companiesFolder = value;
-					await this.plugin.saveSettings();
-				}));
-		new Setting(containerEl)
-			.setName('Директория для персон')
-			.setDesc('Директория, в которой будут создаваться заметки о персонах')
-			.setTooltip('Все поля в заметке, а также теги и другие значения будут ссылаться на этот путь. Не рекомендуется менять значение при уже созданных плагином заметках.')
-			.addText(text => text
-				.setPlaceholder('укажите путь')
-				.setValue(this.plugin.settings.personsFolder)
-				.onChange(async (value) => {
-					this.plugin.settings.personsFolder = value;
-					await this.plugin.saveSettings();
-				}));
+		function FolderSettingsDisplay(name,desc, varSet) {
+			new Setting(containerEl)
+				.setName(name)
+				.setDesc(desc)
+				.setTooltip('Все поля в заметке, а также теги и другие значения будут ссылаться на этот путь. \nНе рекомендуется менять значение при уже созданных плагином заметках.')
+				.addText(text => text
+					.setPlaceholder('укажите путь')
+					.setValue(varSet)
+					.onChange(async (value) => {
+						varSet = value;
+						await this.plugin.saveSettings();
+					}));
+		}
+		const foldersPath = [
+			['Директория для компаний', 'Директория, в которой будут создаваться заметки о компании', this.plugin.settings.companiesFolder],
+			['Директория для персон', 'Директория, в которой будут создаваться заметки о персонах', this.plugin.settings.personsFolder],
+			['Директория для продуктов компании', 'Директория, в которой будут создаваться заметки о продуктах', this.plugin.settings.productsFolder],
+			['Директория для проектов', 'Директория, в которой будут создаваться заметки о проектах', this.plugin.settings.projectsFolder],
+		];
+		foldersPath.forEach( (item) => {
+			FolderSettingsDisplay(...item);
+		})
 		new Setting(containerEl)
 			.setName('Открывать после создания')
 			.setDesc("Следует ли открыть новую созданную заметку при успешном завершении процесса.")
@@ -92,14 +97,27 @@ export class BirSettingsTab extends PluginSettingTab {
 					.addOption('guest', 'Не использовать логин-пароль')
 					.addOption('auth', 'Авторизоваться как пользователь')
 					.setValue(this.plugin.settings.useCredentials ? 'auth' : 'guest')
-					.onChange(async(value) => {
-						this.plugin.settings.useCredentials = (value == 'auth');
-						await this.plugin.saveSettings();
-						this.display(); // force refresh
-					})
+					.onChange(async value => {
+							this.plugin.settings.useCredentials = (value == 'auth');
+							await this.plugin.saveSettings()
+							this.display(); // force refresh
+						})
 				}
 			)
 		if (this.plugin.settings.useCredentials) {
+			new Setting(containerEl)
+				.setName('Сервис проверки контрагентов')
+				.addDropdown(dropdown => {
+					dropdown
+						.addOption('BIR', 'БИР Аналитик')
+						.setValue('BIR')
+						.onChange(async(value) => {
+							this.plugin.settings.extServiceName = value;
+							await this.plugin.saveSettings();
+							this.display(); // force refresh
+						})
+					}
+				)
 			new Setting(containerEl)
 				.setDisabled(this.plugin.settings.useCredentials)
 				.setName('Учётная запись')

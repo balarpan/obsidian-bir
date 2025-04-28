@@ -54,7 +54,7 @@ where record_type="regional_office"
 ```dataview
 TABLE WITHOUT ID link(file.name,ФИО) as "ФИО", country_residence as "Страна", Город, Должность, link(Фото,"50") as "Фото", dateformat(row.file.mtime, "yyyy-MM-dd") as "Обновлено"
 from #<% tagsString %> 
-where record_type="person"
+where record_type="personNote"
 sort Страна, ФИО
 ```
 

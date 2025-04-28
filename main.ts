@@ -2,6 +2,8 @@ import { App, Editor, MarkdownView, Modal, FuzzySuggestModal, Notice, Plugin, Pl
 import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./settings/SettingsTab"
 import { requestUrl, PluginManifest } from "obsidian";
 import { BIR, birGetByID } from './bir-tools.ts';
+import { Person } from './person.ts';
+import { Product } from './product.ts';
 
 export default class BirPlugin extends Plugin {
 	settings: BirSettings;
@@ -41,6 +43,22 @@ export default class BirPlugin extends Plugin {
 			id: 'BIR-selection-find-add-company',
 			name: 'Найти и добавить компанию из выделенного текста',
 			callback: () => {this.findCreateCompanyBySelection();},
+		});
+		this.addCommand({
+			id: 'BIR-add-person-dialog',
+			name: 'Добавить персону или сотрудника',
+			callback: async () => {
+				const pers = new Person(this.app, this);
+				await pers.addManually();
+			},
+		});
+		this.addCommand({
+			id: 'BIR-add-product-dialog',
+			name: 'Добавить продукт компании',
+			callback: async () => {
+				const prod = new Product(this.app, this);
+				await prod.addManually();
+			},
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin

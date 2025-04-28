@@ -47,12 +47,12 @@ export class BIR {
 
 		const cname = comp_data['Наименование'].replace(/^(АО |ООО )/g, '');
 		const folderPath = insideFolderPath + "/Россия/" + sanitizeName(cname);
-		if (!this.createFolder(folderPath)) {
+		if ( !(await this.createFolder(folderPath)) ) {
 			new Notice(`Ошибка создания каталога ${folderPath}!`, 3000);
 			return false;
 		}
-		this.createFolder(folderPath + "/docs/" + moment().format("YYYY"));
-		this.createFolder(folderPath + "/_media");
+		await this.createFolder(folderPath + "/docs/" + moment().format("YYYY"));
+		await this.createFolder(folderPath + "/_media");
 		const notePath = normalizePath(folderPath + "/" + sanitizeName(cname + "_HQ") + ".md");
 		// const file = app.vault.getAbstractFileByPath(notePath);
 		const file = await app.vault.create(notePath, "");
@@ -77,16 +77,16 @@ export class BIR {
 	}
 
 	/** Create folder by path. If intermediate folders do not exist, they will also be created. */
-	createFolder(folderPath: string): bool {
+	async createFolder(folderPath: string): Promise<bool> {
 		const pathArr = normalizePath(folderPath).split('/');
 		const pathParent = pathArr.slice(0, -1).join('/');
 		if (pathParent.length && !this.isFolderExists(pathParent)) {
-			this.createFolder(pathParent);
+			await this.createFolder(pathParent);
 		}
 		const pathCln = normalizePath(pathArr.join('/'));
 		if( this.isFolderExists(pathCln) ) { return true; }
 		try {
-			this.app.vault.createFolder(pathCln);
+			await this.app.vault.createFolder(pathCln);
 		} catch(err) { return false; }
 		return true;
 	}
@@ -116,15 +116,13 @@ export class BIR {
 		).parse_template({ target_file: dstFile, run_mode: 4 }, templateStr);
 	}
 
-	public getPathToComapnyTemplate(): string {
-		const path = "/" + this.myPlugin.manifest.dir + "/resources/templates/new_company_tpl.md";
+	public getPathToComapnyTemplateDir(): string {
+		const path = "/" + this.myPlugin.manifest.dir + "/resources/templates";
 		return path;
-		return normalizePath(
-				// this.app.vault.adapter.basePath +
-				"/" + this.myPlugin.manifest.dir + 
-				// "/.obsidian/plugins/obsidian-bir" +
-				"/templates/new_company_tpl.md"
-		);
+	}
+	public getPathToComapnyTemplate(): string {
+		const path = this.getPathToComapnyTemplateDir() + "/new_company_HQ_tpl.md";
+		return path;
 	}
 
 	async runCompanyTemplate(noteFile: TFile, compData: dict): Promise<bool> {

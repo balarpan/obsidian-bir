@@ -1,6 +1,6 @@
 {
 	"id": "bir-analitik-plugin",
-	"name": "BIR Analitik Plugin",
+	"name": "BIR Analitik",
 	"version": "1.0.0",
 	"minAppVersion": "1.8.3",
 	"description": "Retrieve company data from official data sources via BIR Analitik service",
