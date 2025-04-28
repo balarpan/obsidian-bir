@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, FuzzySuggestModal, Notice, Plugin, PluginManifest, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, SuggestModal, FuzzySuggestModal, Notice, Plugin, PluginManifest, Setting } from 'obsidian';
 import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./src/settings/SettingsTab"
 import { requestUrl, PluginManifest } from "obsidian";
 import { BIR, birGetByID } from './src/bir-tools.ts';
@@ -24,7 +24,9 @@ export default class BirPlugin extends Plugin {
 		if (this.settings.ribbonButton) {
 			const ribbonIconEl = this.addRibbonIcon('library', 'Сведения о компаниях', (evt: MouseEvent) => {
 				// Called when the user clicks the icon.
-				this.findCreateCompany();
+				// this.findCreateCompany();
+				const cmdListDlg = new ButtonModal(this.app, this);
+				cmdListDlg.open();
 			});
 			// Perform additional things with the ribbon
 			// ribbonIconEl.addClass('my-plugin-ribbon-class');
@@ -47,10 +49,7 @@ export default class BirPlugin extends Plugin {
 		this.addCommand({
 			id: 'BIR-add-person-dialog',
 			name: 'Добавить персону или сотрудника',
-			callback: async () => {
-				const pers = new Person(this.app, this);
-				await pers.addManually();
-			},
+			callback: async () => {await this.addPersonManually();}
 		});
 		this.addCommand({
 			id: 'BIR-add-product-dialog',
@@ -113,6 +112,16 @@ export default class BirPlugin extends Plugin {
 		})
 	}
 
+	async addPersonManually() {
+		const pers = new Person(this.app, this);
+		await pers.addManually();
+	}
+
+	async addProductManually() {
+		const prod = new Product(this.app, this);
+		await prod.addManually();
+	}
+
 	onunload() {
 
 	}
@@ -127,20 +136,59 @@ export default class BirPlugin extends Plugin {
 
 }
 
-class SampleModal extends Modal {
-	constructor(app: App, txt: string) {
+interface ButtonModalCmd {
+	name: string;
+	desc: string,
+	disabled: bool,
+	callback: ()=> any,
+	callback_args: null,
+}
+
+
+class ButtonModal extends SuggestModal<ButtonModalCmd> {
+	private app: App;
+	private myPlugin: BirPlugin;
+	private commands: ButtonModalCmd[];
+
+	constructor(app: App, birPlugin: BirPlugin) {
 		super(app);
+
+		this.app = app;
+		this.myPlugin = birPlugin;
+		this.commands = this.getCommands();
+		this.setTitle("Ведение заметок о компаниях");
+		this.setPlaceholder("Выберите нужную команду");
 	}
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText(txt);
+	getSuggestions(query: string): ButtonModalCmd[] {
+	  return this.commands.filter((cmd) =>
+	    cmd.name.includes(query.toLowerCase())
+	  );
 	}
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
+  renderSuggestion(cmd: string, el: HTMLElement) {
+    el.createEl('div', { text: cmd.name });
+    if ( cmd.desc && cmd.desc.trim().length ) el.createEl('small', { text: cmd.desc.trim(), cls: 'bir_mainbtn_iteminfo' });
+  }
+
+  onChooseSuggestion(cmd: string, evt: MouseEvent | KeyboardEvent) {
+  	if ( cmd.callback )
+  		cmd.callback();
+  	// this.myPlugin.findCreateCompany();
+    new Notice(`Selected ${cmd.name}`);
+  }
+
+	getCommands(): string[] {
+		const plg = this.myPlugin
+		const cmds = [
+			{name: 'Найти и добавить компанию', desc: 'Поиск организации и создание заполненной заметки', disabled:false, callback: plg.findCreateCompany.bind(plg)},
+			{name: 'Добавить персону', disabled:false, callback: plg.addPersonManually.bind(plg)},
+			{name: 'Добавить продукт', desc: 'Добавить продукт, которым владеет компания', disabled:false, callback: plg.addProductManually.bind(plg)},
+			{name: 'Найти и добавить по выделенному тексту', desc: 'Поиск организации на основе выделенного пользователем текста', disabled: plg.getCurrentSelection().length ? false : true, callback: plg.findCreateCompanyBySelection.bind(plg)},
+		];
+		return cmds.filter( (item)=> !item.disabled );
 	}
+
 }
 
 export class CompanyFindModal extends Modal {

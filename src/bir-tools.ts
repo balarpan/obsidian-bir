@@ -46,7 +46,8 @@ export class BIR {
 			return false;
 		}
 
-		const cname = comp_data['Наименование'].replace(/^(АО |ООО )/g, '');
+		// const cname = comp_data['Наименование'].replace(/^(АО |ООО |ПАО )/g, '');
+		const cname = comp_data['Наименование'].replace(this.myPlugin.settings.formOfPropertyRegexp, '');
 		const folderPath = insideFolderPath + "/Россия/" + sanitizeName(cname);
 		if ( !(await this.createFolder(folderPath)) ) {
 			new Notice(`Ошибка создания каталога ${folderPath}!`, 3000);
@@ -57,7 +58,6 @@ export class BIR {
 		const notePath = normalizePath(folderPath + "/" + sanitizeName(cname + "_HQ") + ".md");
 		// const file = app.vault.getAbstractFileByPath(notePath);
 		const file = await app.vault.create(notePath, "");
-		console.log("file", file);
 		const res = this.runCompanyTemplate(file, comp_data);
 		if (res) { new Notice(`Создана заметка \n${cname}`, 5000); }
 
@@ -129,7 +129,6 @@ export class BIR {
 	}
 
 	async runCompanyTemplate(noteFile: TFile, compData: dict): Promise<bool> {
-		console.log("data for template", compData);
 		if (!this.isTemplaterEnabled()) {
 			new Notice("Для использования шаблонов необходим установленный и запущенный Templater!", 3000);
 			return false;
@@ -149,10 +148,10 @@ export class BIR {
 				}
 
 				let okved = '';
-				function okvedPrint(obj) { return obj.map(function(e, i){return '- ' + e[0] + ' - ' + e[1]}).join('\n');}
+				function okvedPrint(obj) { return obj.map(function(e, i){return '> - ' + e[0] + ' - ' + e[1]}).join('\n');}
 				if (compData['ОКВЭД']) {
-					okved += compData['ОКВЭД']['Основной'] ? "\n**Основной**\n" + okvedPrint(compData['ОКВЭД']['Основной']) : '';
-					okved += compData['ОКВЭД']['Дополнительные'] ? "\n**Дополнительный**\n" + okvedPrint(compData['ОКВЭД']['Дополнительные']) : '';
+					okved += compData['ОКВЭД']['Основной'] ? "\n> [!info] Основной\n" + okvedPrint(compData['ОКВЭД']['Основной']) + "\n" : '';
+					okved += compData['ОКВЭД']['Дополнительные'] ? "\n> [!info]- Дополнительный\n" + okvedPrint(compData['ОКВЭД']['Дополнительные']) + "\n" : '';
 				}
 				const notallowed = ['ОКВЭД', 'ИНН', 'ОГРН', 'ОКПО', 'Статус_bool', 'Благонадежность', 'Кредитоспособность'];
 				let data2 = Object(compData);
@@ -165,7 +164,7 @@ export class BIR {
 				modified += ['ИНН', 'ОГРН', 'ОКПО'].map((key) => {
 					return key in compData ? `**${key}**:: ${compData[key]} ` : '';
 				}).join(' ') + '\n\n';
-				modified += Object.entries(data2).map(([key, value]) => `**${key}**:: ${value}`).join('\n');
+				modified += Object.entries(data2).map(([key, value]) => `- **${key}**:: ${value}`).join('\n');
 				modified += okved.length ? '\n\n### ОКВЭД\n' + okved + '\n' : '';
 				await self.app.vault.modify(noteFile, modified);
 
@@ -187,7 +186,8 @@ export class BIR {
 	}
 
 	getCompanyTplHeader(compData: dict): string {
-		const name = compData['Наименование'].replace(/^(АО |ООО )/g, '').replaceAll('"', '');
+		const name = compData['Наименование'].replace(this.myPlugin.settings.formOfPropertyRegexp, '').replaceAll('"', '');
+		// const name = compData['Наименование'].replace(/^(АО |ООО |ПАО )/g, '').replaceAll('"', '');
 		let ret: string = `<%*
 function sanitizeName(t) { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_').replace(/_+/g, '_');}
 var pname = "${name}";

@@ -14,7 +14,8 @@ export const DEFAULT_SETTINGS: BirSettings = {
 	useCredentials: false,
 	authUser: '',
 	authPass: '',
-	ribbonButton: false
+	ribbonButton: false,
+	formOfPropertyRegexp: new RegExp(/^(АО |ООО |ПАО )/g)
 }
 
 export class BirSettingsTab extends PluginSettingTab {

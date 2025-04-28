@@ -1,3 +1,9 @@
+.bir_mainbtn_iteminfo {
+  color: var(--text-muted);
+  line-height: var(--line-height-tight);
+}
+
+
 .bir_quicksrch_item {
 /*	border: 1px solid var(--background-modifier-border);	*/
 }
