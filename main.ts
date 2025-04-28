@@ -37,6 +37,11 @@ export default class BirPlugin extends Plugin {
 			name: 'Найти и добавить компанию',
 			callback: () => {this.findCreateCompany();},
 		});
+		this.addCommand({
+			id: 'BIR-selection-find-add-company',
+			name: 'Найти и добавить компанию из выделенного текста',
+			callback: () => {this.findCreateCompanyBySelection();},
+		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new BirSettingsTab(this.app, this));
@@ -45,25 +50,46 @@ export default class BirPlugin extends Plugin {
 		// this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
+	async companySelect(found: Array) {
+		if (!found.length) {
+			new Notice("Ничего не найдено", 3000);
+			return;
+		}
+
+		new BirQuickSelect(this.app, found, (selected) => {
+			// birGetByID(selected.id).then( (birdata) => {
+			// 	console.log("got!", birdata);
+			// });
+			this.birObj.noteCompany_HQ(selected.id, this.settings.companiesFolder);
+		}).open();
+	}
 	/** Opens a dialog to search for a company in external sources and create a note */
 	async findCreateCompany() {
 		new CompanyFindModal(this.app, (result) => {
 			const res = this.birObj.birSearch(result)
 			res.then((found) => {
-				if (!found.length) {
-					new Notice("Ничего не найдено", 3000);
-					return;
-				}
-
-				new BirQuickSelect(this.app, found, (selected) => {
-					// birGetByID(selected.id).then( (birdata) => {
-					// 	console.log("got!", birdata);
-					// });
-					this.birObj.noteCompany_HQ(selected.id, this.settings.companiesFolder);
-				}).open();
-
+				this.companySelect(found);
 			})
 		}).open();
+	}
+
+	getCurrentSelection(editor?:Editor) {
+		if( editor ) return editor.getSelection();
+		const selection = window.getSelection().toString();
+		return selection;
+	}
+
+	/** use user selected text to find company */
+	async findCreateCompanyBySelection(editor:(Editor|undefined),view:MarkdownView|undefined,) {
+		if( ! view ) view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if( (! editor) && view ) editor = view.editor;
+		const selectionTxt = this.getCurrentSelection(editor);
+		if ( 2 > selectionTxt.length ) {new Notice("Выделите хотя бы три символа для начала поиска!"); return;}
+
+		const res = this.birObj.birSearch(selectionTxt)
+		res.then((found) => {
+			this.companySelect(found);
+		})
 	}
 
 	onunload() {
