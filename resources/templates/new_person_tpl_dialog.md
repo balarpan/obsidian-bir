@@ -2,7 +2,7 @@
 function sanitizeName(t) { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/g,'_').replace(/_+/g, '_');}
 function sanitizeLite(t) { return t.replace(/[&\/\\#,+()$~%.'":*?<>{}]/g,'_').replace(/_+/g, '_');}
 
-const countryList = ["Россия", "Белоруссия", "Казахстан", "Узбекистан", "Азербайджан", "ОАЭ", "США"];
+const countryList = ["Россия", "Белоруссия", "Казахстан", "Узбекистан", "ОАЭ", "США"];
 //const countryList = tp.user.countryList();
 let country = await tp.system.suggester(countryList, countryList, false, 'Страна (опционально)');
 

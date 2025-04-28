@@ -4,7 +4,8 @@ function sanitizeLite(t) { return t.replace(/[&\/\\#,+()$~%.'":*?<>{}]/g,'_').re
 
 const pName = (await tp.system.prompt("Наименование проекта")).trim();
 if ( !pName.length ) { return; }
-const countryList = tp.user.countryList();
+//const countryList = tp.user.countryList();
+const countryList = ["Россия", "Белоруссия", "Казахстан", "Узбекистан", "ОАЭ", "США"];
 const country = await tp.system.suggester(countryList, countryList, false, 'Страна (опционально)');
 
 //enumerate Companies and check that we hava file in the path not a folder with ".md" in the name

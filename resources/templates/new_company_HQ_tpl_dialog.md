@@ -1,7 +1,7 @@
 new_company
 <%*  
 function sanitizeName(t) { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_').replace(/_+/g, '_');}
-const countryList = ["Россия", "Белоруссия", "Казахстан", "Узбекистан", "Азербайджан", "ОАЭ", "США"];
+const countryList = ["Россия", "Белоруссия", "Казахстан", "Узбекистан", "ОАЭ", "США"];
 //const countryList = tp.user.countryList();
 var pname = (await tp.system.prompt("Наименование новой компании")).trim();
 const pnameCln = sanitizeName(pname);
