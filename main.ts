@@ -174,17 +174,21 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 	onChooseSuggestion(cmd: string, evt: MouseEvent | KeyboardEvent) {
 		if ( cmd.callback )
 			cmd.callback();
-		// this.myPlugin.findCreateCompany();
-		new Notice(`Selected ${cmd.name}`);
 	}
 
 	getCommands(): string[] {
-		const plg = this.myPlugin
+		const plg = this.myPlugin;
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const activeTFile = activeView ? activeView.file : null;
+		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
+		const activeRecordType = meta?.frontmatter?.record_type;
 		const cmds = [
 			{name: 'Найти и добавить компанию', desc: 'Поиск организации и создание заполненной заметки', disabled:false, callback: plg.findCreateCompany.bind(plg)},
 			{name: 'Добавить персону', disabled:false, callback: plg.addPersonManually.bind(plg)},
 			{name: 'Добавить продукт', desc: 'Добавить продукт, которым владеет компания', disabled:false, callback: plg.addProductManually.bind(plg)},
 			{name: 'Найти и добавить по выделенному тексту', desc: 'Поиск организации на основе выделенного пользователем текста', disabled: plg.getCurrentSelection().length ? false : true, callback: plg.findCreateCompanyBySelection.bind(plg)},
+			{name: 'Найти связанные структуры к открытой организации', desc: 'Найти и добавить связанные структуры для организации, открытой сейчас в активной вкладке', disabled: (activeRecordType && 'company_HQ'==activeRecordType) ? false : true, callback: null},
+			{name: 'Найти персоны к открытой организации', desc: 'Найти и добавить связанные персоны для организации, открытой сейчас в активной вкладке', disabled: (activeRecordType && 'company_HQ'==activeRecordType) ? false : true, callback: null},
 		];
 		return cmds.filter( (item)=> !item.disabled );
 	}

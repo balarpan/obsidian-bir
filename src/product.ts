@@ -38,7 +38,6 @@ export class Product {
 					new Notice("Не найден Templater!");
 					return false;
 				}
-				console.log(this.myPlugin.settings.personsFolder, tmpNoteName);
 				await templater.create_new_note_from_template(tplContent, this.myPlugin.settings.personsFolder, tmpNoteName, true);
 			}
 		});
