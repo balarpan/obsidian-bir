@@ -58,12 +58,14 @@ export class BIR {
 		const file = await app.vault.create(notePath, "");
 		console.log("file", file);
 		const res = this.runCompanyTemplate(file, comp_data);
-		if (res) { new Notice(`Создано для ${cname}`, 3000); }
+		if (res) { new Notice(`Создана заметка ${cname}`, 3000); }
 
 		//Open in active view
-		const active_leaf = this.app.workspace.getLeaf(false);
-		if (!active_leaf) { return; }
-		await active_leaf.openFile(file, {state: { mode: "source" }, });
+		if (this.myPlugin.settings.openAfterCreation) {
+			const active_leaf = this.app.workspace.getLeaf(false);
+			if (!active_leaf) { return; }
+			await active_leaf.openFile(file, {state: { mode: "source" }, });
+		}
 	}
 
 	isFolderExists(folderPath: string): bool {
