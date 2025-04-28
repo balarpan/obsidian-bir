@@ -117,7 +117,7 @@ export class BIR {
 	}
 
 	public getPathToComapnyTemplate(): string {
-		const path = "/" + this.myPlugin.manifest.dir + "/templates/new_company_tpl.md";
+		const path = "/" + this.myPlugin.manifest.dir + "/resources/templates/new_company_tpl.md";
 		return path;
 		return normalizePath(
 				// this.app.vault.adapter.basePath +
