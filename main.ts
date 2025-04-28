@@ -81,12 +81,15 @@ export default class BirPlugin extends Plugin {
 			this.birObj.noteCompany_HQ(selected.id, this.settings.companiesFolder);
 		}).open();
 	}
+
 	/** Opens a dialog to search for a company in external sources and create a note */
 	async findCreateCompany() {
 		new CompanyFindModal(this.app, (result) => {
 			const res = this.birObj.birSearch(result)
 			res.then((found) => {
-				this.companySelect(found);
+				//only companies, not linked persons
+				const foundCompanies = found.filter( (item)=> 0 == item.objectType );
+				this.companySelect(foundCompanies);
 			})
 		}).open();
 	}
@@ -216,7 +219,8 @@ export class BirQuickSelect extends FuzzySuggestModal<BirQuickSearch> {
     // el.appendChild(div);
     // div = createDiv({ text: "ИНН: " + item.item.inn });
     // el.appendChild(div);
-    el.innerHTML += `<p><small class="bir_quicksrch_iteminfo">ИНН: ${item.item.inn}&nbsp;&nbsp;ОГРН: ${item.item.ogrn}</small></p>`;
+    el.innerHTML += `<p class="bir_quicksrch_iteminfo"><small>ИНН: ${item.item.inn}&nbsp;&nbsp;ОГРН: ${item.item.ogrn}</small></p>`;
+    el.innerHTML += (item.item.address && item.item.address.length) ? `<p class="bir_quicksrch_iteminfo_address"><small>${item.item.address}</small></p>` : '';
   }
 
   // // Perform action on the selected suggestion.

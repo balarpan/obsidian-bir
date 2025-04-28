@@ -2,6 +2,7 @@ import { App, Notice, TFile, TFolder, normalizePath, PluginManifest, DataAdapter
 
 export class BIR {
 	readonly quickURL = 'https://svc-5024.birweb.1prime.ru/v2/QuickSearch?term=';
+	readonly fullSearchURL = 'https://svc-5024.birweb.1prime.ru/v2/FullSearch?skip=0&take=20&term=';
 	readonly companyBriefURL = 'https://site.birweb.1prime.ru/company-brief/';
 	// readonly http = require('https');
 
@@ -14,12 +15,12 @@ export class BIR {
 	async birSearch(searchTxt: string): Promise<array> {
 		const srchValue = searchTxt;
 		if (!srchValue.length || 2>srchValue.length ) {
-			new Notice("Укажите как минимум три символа для начала поиска!", 3000)
+			new Notice("Укажите как минимум три символа для начала поиска!", 4000)
 			return [];
 		}
 
 		try {
-			const res = await fetch(this.quickURL + encodeURIComponent(srchValue));
+			const res = await fetch(this.fullSearchURL + encodeURIComponent(srchValue));
 			let found = await res.json();
 			//clean HTML tags from full and short names
 			found = found.map( item => {
@@ -58,7 +59,7 @@ export class BIR {
 		const file = await app.vault.create(notePath, "");
 		console.log("file", file);
 		const res = this.runCompanyTemplate(file, comp_data);
-		if (res) { new Notice(`Создана заметка ${cname}`, 3000); }
+		if (res) { new Notice(`Создана заметка \n${cname}`, 5000); }
 
 		//Open in active view
 		if (this.myPlugin.settings.openAfterCreation) {

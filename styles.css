@@ -4,4 +4,10 @@
 
 .bir_quicksrch_iteminfo {
   color: var(--text-muted);
+  line-height: var(--line-height-tight);
+}
+
+.bir_quicksrch_iteminfo_address {
+  color: var(--color-orange);
+  line-height: var(--line-height-tight);
 }
