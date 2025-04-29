@@ -123,11 +123,11 @@ export default class BirPlugin extends Plugin {
 	}
 
 	onunload() {
-
 	}
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings.formOfPropertyRegexp = new RegExp(this.settings.formOfPropertyRegexpStr);
 	}
 
 	async saveSettings() {
@@ -182,13 +182,19 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 		const activeTFile = activeView ? activeView.file : null;
 		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
 		const activeRecordType = meta?.frontmatter?.record_type;
+		const taxID = meta?.frontmatter?.taxID;
+		console.log("modal", activeRecordType, taxID, (activeRecordType && taxID && taxID.length && 'company_HQ'==activeRecordType ));
 		const cmds = [
 			{name: 'Найти и добавить компанию', desc: 'Поиск организации и создание заполненной заметки', disabled:false, callback: plg.findCreateCompany.bind(plg)},
 			{name: 'Добавить персону', disabled:false, callback: plg.addPersonManually.bind(plg)},
 			{name: 'Добавить продукт', desc: 'Добавить продукт, которым владеет компания', disabled:false, callback: plg.addProductManually.bind(plg)},
 			{name: 'Найти и добавить по выделенному тексту', desc: 'Поиск организации на основе выделенного пользователем текста', disabled: plg.getCurrentSelection().length ? false : true, callback: plg.findCreateCompanyBySelection.bind(plg)},
-			{name: 'Найти связанные структуры к открытой организации', desc: 'Найти и добавить связанные структуры для организации, открытой сейчас в активной вкладке', disabled: (activeRecordType && 'company_HQ'==activeRecordType) ? false : true, callback: null},
-			{name: 'Найти персоны к открытой организации', desc: 'Найти и добавить связанные персоны для организации, открытой сейчас в активной вкладке', disabled: (activeRecordType && 'company_HQ'==activeRecordType) ? false : true, callback: null},
+			{name: 'Найти связанные структуры к открытой организации', desc: 'Найти и добавить связанные структуры для организации, открытой сейчас в активной вкладке',
+				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
+				callback: null},
+			{name: 'Найти персоны к открытой организации', desc: 'Найти и добавить связанные персоны для организации, открытой сейчас в активной вкладке',
+				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
+				callback: null},
 		];
 		return cmds.filter( (item)=> !item.disabled );
 	}

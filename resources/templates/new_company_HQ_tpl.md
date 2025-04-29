@@ -4,6 +4,7 @@ tags: <% tagsString %> Company_HQ
 created_on:  <% tp.date.now("YYYY-MM-DD") %>
 <% (country ? 'country: "' + country + '"': 'country:') %>
 CompanyFullName: '<% pname %>'
+taxID: "<% taxID %>"
 Industry:
 parentCompany:
 record_type: company_HQ

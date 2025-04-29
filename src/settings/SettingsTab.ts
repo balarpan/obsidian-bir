@@ -1,7 +1,19 @@
 import {App, ButtonComponent, PluginSettingTab, SearchComponent, Setting, TextComponent} from "obsidian"
 
 interface BirSettings {
-	mySetting: string;
+	companiesFolder: string;
+	personsFolder: string,
+	productsFolder: string,
+	projectsFolder: string,
+	openAfterCreation: bool,
+	extServiceName: string,
+	useCredentials: bool,
+	authUser: string,
+	authPass: string,
+	ribbonButton: bool,
+	formOfPropertyRegexp: void,
+	formOfPropertyRegexpStr: string
+
 }
 
 export const DEFAULT_SETTINGS: BirSettings = {
@@ -15,7 +27,8 @@ export const DEFAULT_SETTINGS: BirSettings = {
 	authUser: '',
 	authPass: '',
 	ribbonButton: false,
-	formOfPropertyRegexp: new RegExp(/^(АО |ООО |ПАО )/g)
+	formOfPropertyRegexp: null,
+	formOfPropertyRegexpStr: '^(АО|ООО|ПАО)\\s+(.+)$'
 }
 
 export class BirSettingsTab extends PluginSettingTab {

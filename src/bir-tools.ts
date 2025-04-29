@@ -47,7 +47,7 @@ export class BIR {
 		}
 
 		// const cname = comp_data['Наименование'].replace(/^(АО |ООО |ПАО )/g, '');
-		const cname = comp_data['Наименование'].replace(this.myPlugin.settings.formOfPropertyRegexp, '');
+		const cname = comp_data['Наименование'].replace(this.myPlugin.settings.formOfPropertyRegexp, '$2 $1');
 		const folderPath = insideFolderPath + "/Россия/" + sanitizeName(cname);
 		if ( !(await this.createFolder(folderPath)) ) {
 			new Notice(`Ошибка создания каталога ${folderPath}!`, 3000);
@@ -186,7 +186,7 @@ export class BIR {
 	}
 
 	getCompanyTplHeader(compData: dict): string {
-		const name = compData['Наименование'].replace(this.myPlugin.settings.formOfPropertyRegexp, '').replaceAll('"', '');
+		const name = compData['Наименование'].replace(this.myPlugin.settings.formOfPropertyRegexp, '$2 $1').replaceAll('"', '');
 		// const name = compData['Наименование'].replace(/^(АО |ООО |ПАО )/g, '').replaceAll('"', '');
 		let ret: string = `<%*
 function sanitizeName(t) { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_').replace(/_+/g, '_');}
@@ -198,7 +198,8 @@ const shortName = "${compData['Наименование'].replaceAll('"','\\\"')
 const fullNameTitle = "${compData['Полное наименование'].replaceAll('"','\\\"')}";
 const companyAddress = "${compData['Адрес'] ? compData['Адрес'].replaceAll('"','\\\"') : ''}";
 const companyStatus = "${compData['Статус'] ? compData['Статус'].replaceAll('"','\\\"') : ''}";
-const tagsString =  country ? "Company/" + country + "/" + pnameCln  : "Company/" + pnameCln;`;
+const tagsString =  country ? "Company/" + country + "/" + pnameCln  : "Company/" + pnameCln;
+const taxID = "${compData['ИНН'] ? compData['ИНН'] : ''}"`;
 		ret += "\n-%>";
 		return ret;
 		}
