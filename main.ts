@@ -2,8 +2,7 @@ import { App, Editor, MarkdownView, Modal, SuggestModal, FuzzySuggestModal, Noti
 import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./src/settings/SettingsTab"
 import { requestUrl, PluginManifest } from "obsidian";
 import { BIR, birGetByID } from './src/bir-tools.ts';
-import { Person } from './src/person.ts';
-import { Product } from './src/product.ts';
+import { Person, Product, Project } from './src/RecordNotes.ts';
 
 export default class BirPlugin extends Plugin {
 	settings: BirSettings;
@@ -49,15 +48,17 @@ export default class BirPlugin extends Plugin {
 		this.addCommand({
 			id: 'BIR-add-person-dialog',
 			name: 'Добавить персону или сотрудника',
-			callback: async () => {await this.addPersonManually();}
+			callback: async () => {await this.addPersonManually(); }
 		});
 		this.addCommand({
 			id: 'BIR-add-product-dialog',
 			name: 'Добавить продукт компании',
-			callback: async () => {
-				const prod = new Product(this.app, this);
-				await prod.addManually();
-			},
+			callback: async () => { this.addProductManually(); },
+		});
+		this.addCommand({
+			id: 'BIR-add-project-dialog',
+			name: 'Добавить проект',
+			callback: async () => { this.addProjectManually();},
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
@@ -120,6 +121,11 @@ export default class BirPlugin extends Plugin {
 	async addProductManually() {
 		const prod = new Product(this.app, this);
 		await prod.addManually();
+	}
+
+	async addProjectManually() {
+		const proj = new Project(this.app, this);
+		await proj.addManually();
 	}
 
 	onunload() {
@@ -188,13 +194,16 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 			{name: 'Найти и добавить компанию', desc: 'Поиск организации и создание заполненной заметки', disabled:false, callback: plg.findCreateCompany.bind(plg)},
 			{name: 'Добавить персону', disabled:false, callback: plg.addPersonManually.bind(plg)},
 			{name: 'Добавить продукт', desc: 'Добавить продукт, которым владеет компания', disabled:false, callback: plg.addProductManually.bind(plg)},
+			{name: 'Добавить проект', desc: 'Добавить заметку о проекте для последующего самостоятельного заполнения', disabled:false, callback: plg.addProjectManually.bind(plg)},
 			{name: 'Найти и добавить по выделенному тексту', desc: 'Поиск организации на основе выделенного пользователем текста', disabled: plg.getCurrentSelection().length ? false : true, callback: plg.findCreateCompanyBySelection.bind(plg)},
 			{name: 'Найти связанные структуры к открытой организации', desc: 'Найти и добавить связанные структуры для организации, открытой сейчас в активной вкладке',
 				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
-				callback: null},
+				callback: null
+			},
 			{name: 'Найти персоны к открытой организации', desc: 'Найти и добавить связанные персоны для организации, открытой сейчас в активной вкладке',
 				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
-				callback: null},
+				callback: null
+			},
 		];
 		return cmds.filter( (item)=> !item.disabled );
 	}

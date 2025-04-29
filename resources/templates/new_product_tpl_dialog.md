@@ -39,7 +39,7 @@ let cSelected = {name:null, country:null, filename:null}
 if ( companiesData.length ) {
 	let sel = await tp.system.suggester(
 		companiesData.map(i => i.selName),
-		companiesData, false, 'Выберите Компанию (опционально)'
+		companiesData, false, 'Выберите Компанию (опционально) или нажмите <Esc>'
 		);
 	cSelected = ( sel ? sel : cSelected );
 }

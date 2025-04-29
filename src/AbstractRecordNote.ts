@@ -1,10 +1,10 @@
-import { App, Notice, TFile, TFolder, normalizePath, PluginManifest, DataAdapter } from "obsidian";
+import { App, Notice, normalizePath, TFolder } from "obsidian";
 
-export class Product {
+export class AbstractRecordNote {
 	private app: App;
 	private myPlugin: BirPlugin;
 	private templatesDir: string;
-	readonly tempalteDialogFName = "new_product_tpl_dialog.md";
+	readonly tempalteDialogFName : string;
 
 	constructor(app: App, birPlugin: BirPlugin) {
 		this.app = app;
@@ -14,7 +14,7 @@ export class Product {
 
 	async addManually(): Promise<bool> {
 		if (!this.isTemplaterEnabled()) {
-			new Notice("Для использования шаблонов необходим установленный и запущенный Templater!", 3000);
+			new Notice("Для использования шаблонов необходим установленный и запущенный\nTemplater!", 5000);
 			return false;
 		}
 		const srcTemplate = this.templatesDir + "/" + this.tempalteDialogFName;
@@ -22,7 +22,7 @@ export class Product {
 			new Notice(`Ошибка создания каталога ${this.myPlugin.settings.personsFolder}!`, 3000);
 			return false;
 		}
-		const tmpNoteName = "tmp_person_tpl.md";
+		const tmpNoteName = "tmp_note_tpl.md";
 		const tmpNoteFile = this.app.vault.getAbstractFileByPath(this.myPlugin.settings.personsFolder + "/" + tmpNoteName);
 		if (tmpNoteFile){
 			//Temporarily file exists. Try to delete them.

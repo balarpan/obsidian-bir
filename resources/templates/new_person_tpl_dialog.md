@@ -4,7 +4,7 @@ function sanitizeLite(t) { return t.replace(/[&\/\\#,+()$~%.'":*?<>{}]/g,'_').re
 
 const countryList = ["Россия", "Белоруссия", "Казахстан", "Узбекистан", "ОАЭ", "США"];
 //const countryList = tp.user.countryList();
-let country = await tp.system.suggester(countryList, countryList, false, 'Страна (опционально)');
+let country = await tp.system.suggester(countryList, countryList, false, 'Страна (опционально) или нажмите <Esc>');
 
 //enumerate Companies and check that we hava file in the path not a folder with ".md" in the name
 const cFiles = this.app.vault.getAllLoadedFiles().filter(i => 'path' in i && 
@@ -40,7 +40,7 @@ let cSelected = {name:null, country:null, filename:null}
 if ( companiesData.length ) {
 	let sel = await tp.system.suggester(
 		companiesData.map(i => i.selName),
-		companiesData, false, 'Выберите Компанию (опционально)'
+		companiesData, false, 'Выберите Компанию (опционально) или нажмите <Esc>'
 		);
 	cSelected = ( sel ? sel : cSelected )
 }

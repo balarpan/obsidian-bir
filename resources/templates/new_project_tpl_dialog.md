@@ -6,7 +6,7 @@ const pName = (await tp.system.prompt("Наименование проекта")
 if ( !pName.length ) { return; }
 //const countryList = tp.user.countryList();
 const countryList = ["Россия", "Белоруссия", "Казахстан", "Узбекистан", "ОАЭ", "США"];
-const country = await tp.system.suggester(countryList, countryList, false, 'Страна (опционально)');
+const country = await tp.system.suggester(countryList, countryList, false, 'Страна (опционально) или нажмите <Esc>');
 
 //enumerate Companies and check that we hava file in the path not a folder with ".md" in the name
 const cFiles = this.app.vault.getAllLoadedFiles().filter(i => 'path' in i && 
@@ -42,7 +42,7 @@ let cSelected = {name:null, country:null, filename:null}
 if ( companiesData.length ) {
 	let sel = await tp.system.suggester(
 		companiesData.map(i => i.selName),
-		companiesData, false, 'Выберите Компанию (опционально)'
+		companiesData, false, 'Выберите Компанию или нажмите <Esc>'
 		);
 	cSelected = ( sel ? sel : cSelected )
 }
