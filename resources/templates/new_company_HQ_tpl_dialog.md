@@ -31,9 +31,12 @@ record_type: company_HQ
 ---
 
 # <% pname %>
-Официальный сайт: 
+Официальный сайт:
+
 ## Краткое описание
+
 ## Центральный аппарат
+
 ## 📇Подчинённые компании
 ```dataviewjs
 dv.table(["Компания", "страна"], dv.pages('"Companies"').where(p => dv.func.contains(p.parentCompany,dv.current().file.link))
@@ -61,11 +64,13 @@ sort Страна, ФИО
 
 
 ## Продукты, сервисы и проекты
+
 ### Продукты и сервисы
 ```dataview
 LIST WITHOUT ID link(file.name, productName) FROM "Products"
 WHERE owner="<% pname %>" and record_type="productNote"
 ```
+
 ### Проекты
 ```dataview
 TABLE WITHOUT ID link(file.name, projectName) as Проект, статус, начало, окончание FROM "Projects"
@@ -89,3 +94,6 @@ LIMIT 50
 
 ### <% tp.date.now("YYYY-MM-DD") %> - Начальная запись
 notes_go_here
+
+
+## Детальные сведения об организации

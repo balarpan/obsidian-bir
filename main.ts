@@ -189,7 +189,6 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
 		const activeRecordType = meta?.frontmatter?.record_type;
 		const taxID = meta?.frontmatter?.taxID;
-		console.log("modal", activeRecordType, taxID, (activeRecordType && taxID && taxID.length && 'company_HQ'==activeRecordType ));
 		const cmds = [
 			{name: 'Найти и добавить компанию', desc: 'Поиск организации и создание заполненной заметки', disabled:false, callback: plg.findCreateCompany.bind(plg)},
 			{name: 'Добавить персону', disabled:false, callback: plg.addPersonManually.bind(plg)},

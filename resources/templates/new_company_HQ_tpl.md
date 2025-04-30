@@ -16,7 +16,7 @@ record_type: company_HQ
 
 ## Краткое описание
 <% fullNameTitle %>
-*<% companyAddress %>*
+<% companyAddress %>
 <% companyStatus.startsWith("Действующая") ?  companyStatus : '=='+companyStatus+'=='  %>
 
 ## Центральный аппарат
