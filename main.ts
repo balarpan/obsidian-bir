@@ -18,6 +18,9 @@ export default class BirPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.birObj = new BIR(this.app, this);
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		const a = await this.birObj.getlinkedPersonsViaTaxID('7727272169');
+		console.log("candidates for taxID 7727272169", a );
 
 		// This creates an icon in the left ribbon.
 		if (this.settings.ribbonButton) {
@@ -243,15 +246,6 @@ export class CompanyFindModal extends Modal {
 						this.close();
 						onSubmit(name);
 					}));
-		
-		// handle <Enter> key
-		// this.scope.register([], 'Enter', () => {
-		//    if ( name.lenght > 2 ) {
-		//    	this.close();
-		//    	new Notice("!!!\n" + name);
-		//    	onSubmit(name);
-		//    }
-		// });
 	}
 }
 

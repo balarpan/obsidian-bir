@@ -4,11 +4,21 @@ export class BIR {
 	readonly quickURL = 'https://svc-5024.birweb.1prime.ru/v2/QuickSearch?term=';
 	readonly fullSearchURL = 'https://svc-5024.birweb.1prime.ru/v2/FullSearch?skip=0&take=20&term=';
 	readonly companyBriefURL = 'https://site.birweb.1prime.ru/company-brief/';
+	readonly BIRconfigURL = 'https://site.birweb.1prime.ru/runtime-config.json';
+	BIRconfigService: Promise;
+
 	// readonly http = require('https');
 
 	constructor(app: App, birPlugin: BirPlugin) {
 		this.app = app;
 		this.myPlugin = birPlugin;
+		this.BIRconfigService = requestUrl({url: this.BIRconfigURL,cmethod: "GET"});
+	}
+
+	async getBIRconfig(): Promise<Dict> {
+		return new Promise((resolve, reject) => {
+			this.BIRconfigService.then((resp) => {resolve(resp.json);}).catch((err) => {reject(err);});
+		});
 	}
 
 	/** Use native BIR quicksearch and show returned results */
@@ -202,9 +212,43 @@ const tagsString =  country ? "Company/" + country + "/" + pnameCln  : "Company/
 const taxID = "${compData['ИНН'] ? compData['ИНН'] : ''}"`;
 		ret += "\n-%>";
 		return ret;
-		}
+	}
 
+	async getlinkedPersonsViaTaxID(taxID: string): [] {
+		try {
+			const birServices = await this.getBIRconfig();
+			const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&take=20&term=' + taxID;
+			const searchRes = await requestUrl({url: searchURL, cmethod: 'GET'}).json;
+			let company = searchRes.filter((item) => (item.objectType == 0 && stripHTMLTags(item.inn) == taxID) );
+			if (company.length !== 1 || !company[0]?.linkedPositions)
+				return [];
+			company = company[0];
+			const companyID = company.id;
+			const candidateFilter = (linkedPos) => linkedPos.filter(
+				(pos) => pos.linkedCompanies && pos.linkedCompanies.filter((cp) => cp.companyId == companyID).length
+				);
+			const candidates = searchRes.filter(
+				(item) => (item.objectType == 1 && item?.linkedPositions && candidateFilter(item?.linkedPositions))
+				);
+			let persons = [];
+			for (let pers of candidates) {
+				const positions_set = new Set( pers.linkedPositions.map((pos) => pos.position) );
+				persons.push({
+					fullName: pers.fullName,
+					birID: pers.id,
+					inn: pers.inn,
+					positions: positions_set
+				});
+			}
+			return persons;
+		} catch (error) {
+			console.error("Error getting BIR config params. Stopping", error);
+			return [];
+		}
+	}
 }
+
+const stripHTMLTags = (str) => str.replace(/<[^>]*>/g, "");
 
 /** prevent * " \ / < > : | ? in file name*/
 function sanitizeName(t) {
