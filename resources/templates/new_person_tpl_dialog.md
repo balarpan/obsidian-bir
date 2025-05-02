@@ -6,7 +6,7 @@ const countryList = ["Россия", "Белоруссия", "Казахстан
 //const countryList = tp.user.countryList();
 let country = await tp.system.suggester(countryList, countryList, false, 'Страна (опционально) или нажмите <Esc>');
 
-//enumerate Companies and check that we hava file in the path not a folder with ".md" in the name
+//enumerate Companies and check that we have a file in the path not a folder with ".md" in the name
 const cFiles = this.app.vault.getAllLoadedFiles().filter(i => 'path' in i && 
  	i.path.startsWith("Companies/") && 
  	i.path.endsWith("_HQ.md") && 
@@ -18,15 +18,15 @@ cFiles.forEach((file) => {
   const noteTFile = tp.file.find_tfile(file.basename);
   var frm = this.app.metadataCache.getFileCache(noteTFile)?.frontmatter || {};
   if ( 'company_HQ' == frm.record_type ) {
-	var selName = frm.CompanyFullName;
+	var selName = frm.CompanyName;
 	if (frm.country && frm.country.trim().length) {
-		selName = frm.CompanyFullName + '   (' + frm.country + ')'
+		selName = frm.companyName + '   (' + frm.country + ')'
 	}
 	companiesData.push({
 		filePath: file.path,
 		filename: file.basename,
 		fileext: file.extension,
-		name: frm.CompanyFullName,
+		name: frm.companyName,
 		tags: frm.tags,
 		country: frm.country,
 		selName: selName

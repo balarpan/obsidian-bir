@@ -236,8 +236,11 @@ const taxID = "${compData['ИНН'] ? compData['ИНН'] : ''}"`;
 				persons.push({
 					fullName: pers.fullName,
 					birID: pers.id,
-					inn: pers.inn,
-					positions: positions_set
+					inn: stripHTMLTags(pers.inn),
+					positions: positions_set,
+					companyFullName: company.fullName,
+					companyTaxID: company.inn ? stripHTMLTags(company.inn) : null,
+					country: 'Россия'
 				});
 			}
 			return persons;

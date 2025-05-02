@@ -1,5 +1,8 @@
-import { App, Notice, normalizePath, TFolder } from "obsidian";
+import { App, Notice, normalizePath, TFile, TFolder } from "obsidian";
 
+/** Abstrcat class for any type of record: Person, Product or Project 
+ * TODO: add class for Company Note 
+ * */
 export class AbstractRecordNote {
 	private app: App;
 	private myPlugin: BirPlugin;
@@ -43,6 +46,10 @@ export class AbstractRecordNote {
 		});
 	}
 
+	/** Create appropriate record based on provided properties */
+	async AddByProperties( inProps: {}): Promise<bool> {
+	}
+
 	private isTemplaterEnabled(): bool {return this.app?.plugins?.enabledPlugins?.has("templater-obsidian");}
 	private getTemplater() {
 		const plugObj = this.app.plugins.plugins["templater-obsidian"];
@@ -51,6 +58,23 @@ export class AbstractRecordNote {
 		//@ts-ignore
 		return plugObj?.templater;
 	}
+	
+	/** run Templater plugin and return result as a string */
+	async runTemplater(templateStr: string, dstFile: TFile): string {
+		const templater = this.getTemplater();
+		if (!templater) return '';
+
+		return await (
+			//@ts-ignore
+			templater as {
+				parse_template: (
+					opt: { target_file: TFile; run_mode: number },
+					content: string
+				) => Promise<string>;
+			}
+		).parse_template({ target_file: dstFile, run_mode: 4 }, templateStr);
+	}
+
 
 	isFolderExists(folderPath: string): bool {
 		const vault = this.app.vault;
@@ -76,5 +100,46 @@ export class AbstractRecordNote {
 		} catch(err) { return false; }
 		return true;
 	}
+
+	/** Reformat company name and return safe string to put into Note. I.e. remove any occurrence of '"' and move property form to the end of name. */
+	companyCleanName(name: string): string { return name.replace(this.myPlugin.settings.formOfPropertyRegexp, '$2 $1'); }
+	sanitizeName(t: string): string { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/g,'_').replace(/_+/g, '_'); }
+
+	/** Search in valut Company Record and return Frontmatter of this Note */
+	async getCompanyNoteByTaxID(in_taxID: string): Promise<{}> {
+		console.log("in_taxID.length", in_taxID.length, in_taxID)
+		if (!in_taxID.length == 10)
+			return {};
+		// enumerate Companies and check that we have a file in the path not a folder with ".md" in the name
+		// takes into account that in settings folders begin with '/', i.e. '/Companies'
+		const cFiles = this.app.vault.getAllLoadedFiles().filter(i => 'path' in i && 
+		 	i.path.startsWith(this.myPlugin.settings.companiesFolder.slice(1)) && 
+		 	i.path.endsWith("_HQ.md") && 
+		 	this.app.vault.getAbstractFileByPath(i.path) instanceof TFile
+		 );
+		let companiesData = [];
+		for (const noteTFile of cFiles) {
+			// let frm = this.app.vault.metadataCache.getFileCache(noteTFile)?.frontmatter || {};
+			try {
+				const frm = await this.app.fileManager.processFrontMatter(noteTFile, (frm) => {
+					if ( frm.record_type && frm.taxID && 'company_HQ' == frm.record_type && frm.taxID == in_taxID) {
+						companiesData.push( Object.assign(
+							{},
+							{filePath: noteTFile.path, filename: noteTFile.basename},
+							frm));
+					}
+				});
+			} catch (err) {
+				return {};
+			}
+		}
+		return companiesData.length == 1 ? companiesData[0] : {};
+	}
+
+	public getPathTemplateDir(): string {
+		const path = "/" + this.myPlugin.manifest.dir + "/resources/templates";
+		return path;
+	}
+
 
 }

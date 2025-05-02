@@ -19,8 +19,13 @@ export default class BirPlugin extends Plugin {
 		await this.loadSettings();
 		this.birObj = new BIR(this.app, this);
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		const a = await this.birObj.getlinkedPersonsViaTaxID('7727272169');
-		console.log("candidates for taxID 7727272169", a );
+		const candidates = await this.birObj.getlinkedPersonsViaTaxID('7727272169');
+		console.log("candidates for taxID 7727272169", candidates );
+		const pers = new Person(this.app, this);
+		const b = await pers.getCompanyNoteByTaxID('7727272169');
+		console.log("find by taxID", b);
+		const c = await pers.AddByProperties(candidates[0]);
+		console.log("recieved", c);
 
 		// This creates an icon in the left ribbon.
 		if (this.settings.ribbonButton) {
