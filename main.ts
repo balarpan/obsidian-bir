@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./src/settings/Set
 import { requestUrl, PluginManifest } from "obsidian";
 import { BIR, birGetByID } from './src/bir-tools.ts';
 import { Person, Product, Project } from './src/RecordNotes.ts';
+import { selectPersonsDlg } from './src/ui-dialogs/selectPersons.ts'
 
 export default class BirPlugin extends Plugin {
 	settings: BirSettings;
@@ -19,13 +20,11 @@ export default class BirPlugin extends Plugin {
 		await this.loadSettings();
 		this.birObj = new BIR(this.app, this);
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		const candidates = await this.birObj.getlinkedPersonsViaTaxID('7727272169');
-		console.log("candidates for taxID 7727272169", candidates );
-		const pers = new Person(this.app, this);
-		const b = await pers.getCompanyNoteByTaxID('7727272169');
-		console.log("find by taxID", b);
-		const c = await pers.AddByProperties(candidates[0]);
-		console.log("recieved", c);
+		// const candidates = await this.birObj.getlinkedPersonsViaTaxID('7727272169');
+		// const pers = new Person(this.app, this);
+		// const b = await pers.getCompanyNoteByTaxID('7727272169');
+		// const c = await pers.AddByProperties(candidates[1]);
+		// console.log("recieved", c);
 
 		// This creates an icon in the left ribbon.
 		if (this.settings.ribbonButton) {
@@ -109,7 +108,7 @@ export default class BirPlugin extends Plugin {
 	}
 
 	/** use user selected text to find company */
-	async findCreateCompanyBySelection(editor:(Editor|undefined),view:MarkdownView|undefined,) {
+	async findCreateCompanyBySelection(editor:(Editor|undefined),view:MarkdownView|undefined) {
 		if( ! view ) view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if( (! editor) && view ) editor = view.editor;
 		const selectionTxt = this.getCurrentSelection(editor);
@@ -119,6 +118,33 @@ export default class BirPlugin extends Plugin {
 		res.then((found) => {
 			this.companySelect(found);
 		})
+	}
+
+	/** Gets company in active opened note and search linked persons in external registry */
+	async findLinkedPersonsForActiveComp(view:MarkdownView|undefined): Promise<bool>{
+		const activeView = view || this.app.workspace.getActiveViewOfType(MarkdownView);
+		const activeTFile = activeView ? activeView.file : null;
+		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
+		const activeRecordType = meta?.frontmatter?.record_type;
+		const taxID = meta?.frontmatter?.taxID;
+		const isValidView: bool = activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
+		if (!isValidView) {
+			new Notice("Команда доступна только если в активной вкладке открыта заметка о компании taxID и record_type='company_HQ'");
+			return false;
+		}
+		const candidates = await this.birObj.getlinkedPersonsViaTaxID(taxID);
+		if (!candidates.length) {
+			new Notice("Не найдены в реестрах связанные с компанией лица");
+			return false;
+		}
+		const dlg = new selectPersonsDlg(this.app, candidates);
+		dlg.open( async (sel) => {
+			const persObj = new Person(this.app, this);
+			for(const pers of sel) {
+				await persObj.AddByProperties(pers);
+			}
+		});
+		return true;
 	}
 
 	async addPersonManually() {
@@ -199,17 +225,17 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 		const taxID = meta?.frontmatter?.taxID;
 		const cmds = [
 			{name: 'Найти и добавить компанию', desc: 'Поиск организации и создание заполненной заметки', disabled:false, callback: plg.findCreateCompany.bind(plg)},
+			{name: 'Найти компанию согласно выделенному тексту и добавить', desc: 'Поиск организации на основе выделенного пользователем текста', disabled: plg.getCurrentSelection().length ? false : true, callback: plg.findCreateCompanyBySelection.bind(plg)},
 			{name: 'Добавить персону', disabled:false, callback: plg.addPersonManually.bind(plg)},
 			{name: 'Добавить продукт', desc: 'Добавить продукт, которым владеет компания', disabled:false, callback: plg.addProductManually.bind(plg)},
 			{name: 'Добавить проект', desc: 'Добавить заметку о проекте для последующего самостоятельного заполнения', disabled:false, callback: plg.addProjectManually.bind(plg)},
-			{name: 'Найти и добавить по выделенному тексту', desc: 'Поиск организации на основе выделенного пользователем текста', disabled: plg.getCurrentSelection().length ? false : true, callback: plg.findCreateCompanyBySelection.bind(plg)},
 			{name: 'Найти связанные структуры к открытой организации', desc: 'Найти и добавить связанные структуры для организации, открытой сейчас в активной вкладке',
 				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
 				callback: null
 			},
-			{name: 'Найти персоны к открытой организации', desc: 'Найти и добавить связанные персоны для организации, открытой сейчас в активной вкладке',
+			{name: 'Найти связанные персоны к открытой организации', desc: 'Найти и добавить связанные персоны для организации, открытой сейчас в активной вкладке',
 				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
-				callback: null
+				callback: plg.findLinkedPersonsForActiveComp.bind(plg)
 			},
 		];
 		return cmds.filter( (item)=> !item.disabled );

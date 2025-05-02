@@ -8,7 +8,7 @@ office:
 office_country:
 record_type: personNote
 ---
-# Персона <% ename %>
+# 👤Персона <% ename %>
 
 ## Контактные данные
 ФИО:: <% ename %>

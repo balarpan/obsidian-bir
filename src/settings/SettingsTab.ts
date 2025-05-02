@@ -85,10 +85,10 @@ export class BirSettingsTab extends PluginSettingTab {
 					}));
 		}
 		const foldersPath = [
-			['Директория для компаний', 'Директория, в которой будут создаваться заметки о компании', this.plugin.settings.companiesFolder],
-			['Директория для персон', 'Директория, в которой будут создаваться заметки о персонах', this.plugin.settings.personsFolder],
-			['Директория для продуктов компании', 'Директория, в которой будут создаваться заметки о продуктах', this.plugin.settings.productsFolder],
-			['Директория для проектов', 'Директория, в которой будут создаваться заметки о проектах', this.plugin.settings.projectsFolder],
+			['Каталог для заметок о компаниях', 'Каталог, в котором будут создаваться заметки о компании', this.plugin.settings.companiesFolder],
+			['Каталог для заметок о персонах', 'Каталог, в котором будут создаваться заметки о персонах', this.plugin.settings.personsFolder],
+			['Каталог для заметок о продуктах компании', 'Каталог, в котором будут создаваться заметки о продуктах', this.plugin.settings.productsFolder],
+			['Каталог для заметок о проектах', 'Каталог, в котором будут создаваться заметки о проектах', this.plugin.settings.projectsFolder],
 		];
 		foldersPath.forEach( (item) => {
 			FolderSettingsDisplay(...item);

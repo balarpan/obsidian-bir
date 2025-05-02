@@ -74,9 +74,10 @@ export class BIR {
 		//Open in active view
 		if (this.myPlugin.settings.openAfterCreation) {
 			const active_leaf = this.app.workspace.getLeaf(false);
-			if (!active_leaf) { return; }
+			if (!active_leaf) { return true; }
 			await active_leaf.openFile(file, {state: { mode: "source" }, });
 		}
+		return true;
 	}
 
 	isFolderExists(folderPath: string): bool {
@@ -237,7 +238,7 @@ const taxID = "${compData['ИНН'] ? compData['ИНН'] : ''}"`;
 					fullName: pers.fullName,
 					birID: pers.id,
 					inn: stripHTMLTags(pers.inn),
-					positions: positions_set,
+					positions: Array.from(positions_set),
 					companyFullName: company.fullName,
 					companyTaxID: company.inn ? stripHTMLTags(company.inn) : null,
 					country: 'Россия'

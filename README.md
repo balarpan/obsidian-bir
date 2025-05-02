@@ -1,3 +1,7 @@
+
+## Compatibility
+To run this plugin you need Obsidian ver 1.83 or above.
+
 # Obsidian Sample Plugin
 
 This is a sample plugin for Obsidian (https://obsidian.md).

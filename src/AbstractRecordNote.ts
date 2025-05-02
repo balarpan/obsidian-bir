@@ -58,7 +58,7 @@ export class AbstractRecordNote {
 		//@ts-ignore
 		return plugObj?.templater;
 	}
-	
+
 	/** run Templater plugin and return result as a string */
 	async runTemplater(templateStr: string, dstFile: TFile): string {
 		const templater = this.getTemplater();
@@ -107,7 +107,6 @@ export class AbstractRecordNote {
 
 	/** Search in valut Company Record and return Frontmatter of this Note */
 	async getCompanyNoteByTaxID(in_taxID: string): Promise<{}> {
-		console.log("in_taxID.length", in_taxID.length, in_taxID)
 		if (!in_taxID.length == 10)
 			return {};
 		// enumerate Companies and check that we have a file in the path not a folder with ".md" in the name

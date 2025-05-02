@@ -14,13 +14,12 @@ export class Person extends AbstractRecordNote {
 		if (!isPropsValid)
 			return false;
 		const companyProps = await this.getCompanyNoteByTaxID(inProps.companyTaxID);
-		console.log("companyProps=", companyProps);
 		if (Object.keys(companyProps).length === 0)
 			return false;
 		props.companyName = companyProps.companyName;
 		props.companyFileName = companyProps.filename;
 		props.companyTaxID = companyProps.taxID;
-		props.positions = props?.positions && props.positions.size ? Array.from(props.positions) : [];
+		props.positions = props?.positions && props.positions.length ? props.positions : [];
 		props.countryResidence = null; // Currently we do not have such info. Let's make sure we do not put false data into Note.
 		props.companyCountry = companyProps.country;
 		
@@ -36,7 +35,6 @@ export class Person extends AbstractRecordNote {
 		const notePath = normalizePath(folderPath + "/" + noteFName + ".md");
 		const noteTFile = await app.vault.create(notePath, "");
 		const tplHeader = this.getNewNoteTplHeader(props);
-		console.log("template header for Person", tplHeader);
 		return this.app.vault.adapter.read(this.getPathTemplateDir() + "/" + this.templateNewNoteFName).then( async (tplContent) => {
 			if (!tplContent.length) {
 				new Notice("Ошибка чтения файла шаблона!", 3000);
@@ -45,6 +43,13 @@ export class Person extends AbstractRecordNote {
 				const tplContentPack = tplHeader + tplContent;
 				let modified = await this.runTemplater(tplContentPack, noteTFile);
 				await self.app.vault.modify(noteTFile, modified);
+
+				//Open in active view
+				if (this.myPlugin.settings.openAfterCreation) {
+					const active_leaf = this.app.workspace.getLeaf(false);
+					if (!active_leaf) { return true; }
+					await active_leaf.openFile(noteTFile, {state: { mode: "source" }, });
+				}
 
 				return true;
 			}
@@ -55,7 +60,6 @@ export class Person extends AbstractRecordNote {
 	sanitizeLite(t :string): string { return t.replace(/[&\/\\#,+()$~%.'":*?<>{}]/g,'_').replace(/_+/g, '_');}
 
 	getNewNoteTplHeader(props: {}): string {
-		console.log("getting in props", props, props.positions);
 		const sanitizeName = this.sanitizeName;
 		const sanitizeLite = this.sanitizeLite;
 		let ret: string = `<%*
