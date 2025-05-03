@@ -42,15 +42,34 @@
   opacity: 0.7;
 }
 .bir_personCandidate_cnt.selected {
-  color: var(--text-success);
+/*  color: var(--text-success);*/
   &:before {
     content: "•";
+    color: var(--text-success);
     position: absolute; left: 0.2em;
     width:2em; height: 2em;
   }
 }
+.bir_personCandidate_cnt.selected > .bir_personCandidate_title {
+/*  text-decoration: underline;*/
+/*  border-bottom: var(--border-width) solid var(--text-success);*/
+  &:after {
+    width: 100%;
+  }
+}
 
-.bir_personCandidate_title {font-weight: 600;}
+.bir_personCandidate_title {
+  font-weight: 600;
+  position: relative;
+  display: inline-block;
+  &:after {
+    content: ''; width: 0%;
+    position: absolute; left: 0; bottom: -1px; height: 1px;
+    background: linear-gradient(to right, var(--text-success) 0%, var(--color-base-100) 35%); background-repeat: repeat-x; background-position: 0 100%; background-size: 100% 1px;
+    overflow: hidden;
+    transition: .1s ease-in;
+  }
+}
 .bir_personCandidate_iteminfo {
   padding-left: 2em;
   color: var(--text-muted);

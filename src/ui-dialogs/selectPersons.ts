@@ -28,7 +28,7 @@ export class selectPersonsDlg extends SuggestModal<personCandidate> {
 			const cont = el.createEl('div', {cls: 'bir_personCandidate_cnt sendBtn'});
 			this.sendCtrl = cont.createEl('div', { text: 'Создать', cls:'sendBtnDisabled'});
 		} else {
-			const cont = el.createEl('div', {cls: 'bir_personCandidate_cnt'});
+			const cont = el.createEl('div', {cls: person.itemSelected ? 'bir_personCandidate_cnt selected' : 'bir_personCandidate_cnt'});
 			cont.createEl('div', { text: person.fullName, cls: 'bir_personCandidate_title'});
 			cont.createEl('div', { text: person.positions.join(', '), cls: 'bir_personCandidate_iteminfo'});
 			cont.createEl('small', { text: '  ИНН: ' + (person.inn ? person.inn : ''), cls: 'bir_personCandidate_iteminfo'});
