@@ -59,7 +59,7 @@
 }
 
 .bir_personCandidate_title {
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   position: relative;
   display: inline-block;
   &:after {
@@ -73,5 +73,6 @@
 .bir_personCandidate_iteminfo {
   padding-left: 2em;
   color: var(--text-muted);
+  font-size: var(--font-ui-medium);
   line-height: var(--line-height-tight);
 }

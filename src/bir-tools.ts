@@ -159,23 +159,27 @@ export class BIR {
 				}
 
 				let okved = '';
-				function okvedPrint(obj) { return obj.map(function(e, i){return '> - ' + e[0] + ' - ' + e[1]}).join('\n');}
+				function okvedPrint(obj): string { return obj.map(function(e, i){return '> - ' + e[0] + ' - ' + e[1]}).join('\n');}
+				function dopCodesPrint(obj): string { let ret =''; for(const k of dopCodesKeys) ret += '    - **' + k + '** - ' + obj[k] + '\n'; return ret;}
 				if (compData['ОКВЭД']) {
 					okved += compData['ОКВЭД']['Основной'] ? "\n> [!info] Основной\n" + okvedPrint(compData['ОКВЭД']['Основной']) + "\n" : '';
 					okved += compData['ОКВЭД']['Дополнительные'] ? "\n> [!info]- Дополнительный\n" + okvedPrint(compData['ОКВЭД']['Дополнительные']) + "\n" : '';
 				}
-				const notallowed = ['ОКВЭД', 'ИНН', 'ОГРН', 'ОКПО', 'Статус_bool', 'Благонадежность', 'Кредитоспособность'];
+				const dopCodesKeys = ['ОКАТО', 'ОКТМО', 'ОКФС', 'ОКОГУ', 'ОКОПФ'].filter( (k)=> compData.hasOwnProperty(k));
+				const notallowed = Array.prototype.concat.call( ['ОКВЭД', 'ИНН', 'ОГРН', 'ОКПО', 'Статус_bool', 'Благонадежность', 'Кредитоспособность'], dopCodesKeys);
 				let data2 = Object(compData);
 				data2 = Object.keys(compData)
 				.filter(key => !notallowed.includes(key))
 				.reduce((obj, key) => { obj[key] = data2[key]; return obj;
 				}, {});
 
+				const dopCodes = dopCodesPrint(compData);
 				modified += "\n\n## Детальные сведения об организации\n\n";
 				modified += ['ИНН', 'ОГРН', 'ОКПО'].map((key) => {
 					return key in compData ? `**${key}**:: ${compData[key]} ` : '';
 				}).join(' ') + '\n\n';
 				modified += Object.entries(data2).map(([key, value]) => `- **${key}**:: ${value}`).join('\n');
+				modified += dopCodes.length ? '\n - **Дополнительные коды**:\n' + dopCodes : '';
 				modified += okved.length ? '\n\n### ОКВЭД\n' + okved + '\n' : '';
 				await self.app.vault.modify(noteFile, modified);
 
@@ -217,14 +221,21 @@ const taxID = "${compData['ИНН'] ? compData['ИНН'] : ''}"`;
 
 	async getlinkedPersonsViaTaxID(taxID: string): [] {
 		try {
+			console.log("starting for taxID", taxID);
 			const birServices = await this.getBIRconfig();
 			const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&take=20&term=' + taxID;
 			const searchRes = await requestUrl({url: searchURL, cmethod: 'GET'}).json;
 			let company = searchRes.filter((item) => (item.objectType == 0 && stripHTMLTags(item.inn) == taxID) );
+			console.log("first filter company[]=", company);
+			if (company.length > 1) {
+				new Notice("Найдено в реестре более чем одна компания с таким ИНН.\nНевозможно продолжить операцию!", 6000);
+				return [];
+			}
 			if (company.length !== 1 || !company[0]?.linkedPositions)
 				return [];
 			company = company[0];
 			const companyID = company.id;
+			console.log("companyID", companyID);
 			const candidateFilter = (linkedPos) => linkedPos.filter(
 				(pos) => pos.linkedCompanies && pos.linkedCompanies.filter((cp) => cp.companyId == companyID).length
 				);
@@ -303,6 +314,7 @@ export async function birGetByID(birID: string): Promise<dict> {
 			'ИНН': "//bir-company-brief//bir-brief-layout//bir-company-header//bir-brief-layout-header//div[contains(@class, 'brief-layout-header__info__codes')]//span[text()='ИНН:']/following-sibling::span",
 			'ОГРН': "//bir-company-brief//bir-brief-layout//bir-company-header//bir-brief-layout-header//div[contains(@class, 'brief-layout-header__info__codes')]//span[text()='ОГРН:']/following-sibling::span",
 			'ОКПО': "//bir-company-brief//bir-brief-layout//bir-company-header//bir-brief-layout-header//div[contains(@class, 'brief-layout-header__info__codes')]//span[text()='ОКПО:']/following-sibling::span",
+			// 'ОКОПФ': "//bir-company-brief//bir-brief-layout//bir-company-header//bir-brief-layout-header//div[contains(@class, 'brief-layout-header__info__codes')]//span[text()='ОКОПФ:']/following-sibling::span",
 			'Статус': "//bir-company-overview//bir-overview-layout//bir-company-status//div[contains(@class, 'company-overview-status__state')]//span"
 		};
 		for (const [recType, xp] of Object.entries(parseStngs)) {
@@ -364,6 +376,24 @@ export async function birGetByID(birID: string): Promise<dict> {
 
 		dsec = doc.querySelector('bir-company-tax-mode.company-overview__tax > div.company-card-widget');
 		bir['Режим налогообложения'] = dsec.querySelector('div.company-card-widget__value').textContent.trim();
+
+		dsec = doc.querySelector('bir-company-codes.company-overview__codes').querySelector('div.key-value-grid');
+		if (dsec) {
+			for (let elIndex=0; elIndex < dsec.children.length; elIndex++) {
+				const el = dsec.children[elIndex];
+				//need a pair of div elements, not an HTML comment, last child in HTMLCollection or etc.
+				if (el.tagName != 'DIV' || elIndex == (dsec.children.length - 1) )
+					continue;
+				const key = el.textContent;
+				elIndex += 1;
+				while (elIndex < dsec.children.length && dsec.children[elIndex].tagName != 'DIV')
+					elIndex += 1;
+				const value = dsec.children[elIndex].textContent;
+
+				if (!bir.hasOwnProperty(key))
+					bir[key] = value;
+			}
+		}
 
 		// dsec = doc.querySelector('bir-company-chiefs div.company-main__controlling-persons');
 		dsec = doc.querySelector('bir-widget-okveds.company-overview__okveds');
