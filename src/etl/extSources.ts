@@ -87,11 +87,19 @@ export class ExternalRegistry {
 		// 	'Адрес': /- \*\*Адрес\*\*:: (.*)\n/ig,
 		// 	'Адрес': /- \*\*Адрес\*\*:: (.*)\n/ig,
 		// }
-		let start = note.match(/^## Детальные сведения об организации\s+$/m);
-		if (!start.index)
+		let startPos = note.match(/^## Детальные сведения об организации\s+$/m);
+		if (!startPos.index)
 			return compData;
-		start = start.index;
-		note.slice(start, -1);
+		startPos = startPos.index;
+		const noteVarsStr = note.slice(startPos);
+		let pMatch;
+		// Example regexp:  /- \*\*Полное наименование\*\*:: (.*)\n/ig
+		const pRegexp = /-\s+\*\*([^:\*]+)\*\*:: (.*)\n/ig;
+		while ((pMatch = pRegexp.exec(noteVarsStr)) !== null) {
+			const key = pMatch[1];
+			if (!compData.hasOwnProperty(key))
+				compData[key] = pMatch[2];
+		}
 		
 	}
 
