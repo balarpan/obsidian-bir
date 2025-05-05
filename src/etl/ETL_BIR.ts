@@ -1,20 +1,18 @@
-import { App, Notice, PluginManifest, TFile, TFolder} from 'obsidian';
+import { App, Notice, TFile, TFolder} from 'obsidian';
 import { BirSettings } from "./src/settings/SettingsTab"
 import { requestUrl } from "obsidian";
 
 
 export class ETL_BIR {
 	private app: App;
-	private manifest: PluginManifest;
 	private settings: BirSettings;
 	private cacheCompByID = {};
 	readonly companyBriefURL = 'https://site.birweb.1prime.ru/company-brief/';
 	readonly BIRconfigURL = 'https://site.birweb.1prime.ru/runtime-config.json';
 	BIRconfigService: Promise;
 
-	constructor(aapp: App, manifest: PluginManifest, settings: BirSettings) {
+	constructor(app: App, settings: BirSettings) {
 		this.app = app;
-		this.manifest = JSON.parse(JSON.stringify(manifest)); // deep copy for safety reasons
 		this.settings = settings;
 		this.BIRconfigService = requestUrl({url: this.BIRconfigURL,cmethod: "GET"});
 	}
@@ -134,6 +132,8 @@ export class ETL_BIR {
 				let val = el.parentNode.nextElementSibling.textContent;
 				bir[n] = val;
 			})
+			if (!bir.hasOwnProperty('Полное наименование'))
+				bir['Полное наименование'] = '';
 
 			bir['Благонадежность'] = doc.querySelector('div.ranged-card__content__value').textContent;
 			// var score_desc = doc.querySelector('div.ranged-card__content__value-description__legend__value').textContent;
@@ -193,6 +193,7 @@ export class ETL_BIR {
 			return bir;
 		}).catch(function (err) {
 			console.warn('BIR by ID. Something went wrong.', err);
+			return false;
 		});
 	}
 }

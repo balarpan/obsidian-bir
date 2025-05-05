@@ -68,7 +68,7 @@ export class BIR {
 		const notePath = normalizePath(folderPath + "/" + sanitizeName(cname + "_HQ") + ".md");
 		// const file = app.vault.getAbstractFileByPath(notePath);
 		const file = await app.vault.create(notePath, "");
-		const res = this.runCompanyTemplate(file, comp_data);
+		const res = await this.runCompanyTemplate(file, comp_data);
 		if (res) { new Notice(`Создана заметка \n${cname}`, 5000); }
 
 		//Open in active view
@@ -221,12 +221,10 @@ const taxID = "${compData['ИНН'] ? compData['ИНН'] : ''}"`;
 
 	async getlinkedPersonsViaTaxID(taxID: string): [] {
 		try {
-			console.log("starting for taxID", taxID);
 			const birServices = await this.getBIRconfig();
 			const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&take=20&term=' + taxID;
 			const searchRes = await requestUrl({url: searchURL, cmethod: 'GET'}).json;
 			let company = searchRes.filter((item) => (item.objectType == 0 && stripHTMLTags(item.inn) == taxID) );
-			console.log("first filter company[]=", company);
 			if (company.length > 1) {
 				new Notice("Найдено в реестре более чем одна компания с таким ИНН.\nНевозможно продолжить операцию!", 6000);
 				return [];
@@ -235,7 +233,6 @@ const taxID = "${compData['ИНН'] ? compData['ИНН'] : ''}"`;
 				return [];
 			company = company[0];
 			const companyID = company.id;
-			console.log("companyID", companyID);
 			const candidateFilter = (linkedPos) => linkedPos.filter(
 				(pos) => pos.linkedCompanies && pos.linkedCompanies.filter((cp) => cp.companyId == companyID).length
 				);

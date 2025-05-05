@@ -1,15 +1,21 @@
-import { App, Notice, PluginManifest, TFile, TFolder} from 'obsidian';
+import { App, Notice, PluginManifest, TFile, TFolder, normalizePath } from 'obsidian';
 import { BirSettings } from "./src/settings/SettingsTab"
 import { requestUrl } from "obsidian";
+import { ETL_BIR } from './ETL_BIR';
 
 export class ExternalRegistry {
 	private app: App;
 	private manifest: PluginManifest;
 	private settings: BirSettings;
+	private etl: Object;
 	constructor(app: App, manifest: PluginManifest, settings: BirSettings) {
 		this.app = app;
 		this.manifest = JSON.parse(JSON.stringify(manifest)); // deep copy for safety reasons
 		this.settings = settings;
+		// TODO: add more external source modules
+		// if ('BIR' === settings.extServiceName)
+		// 	this.etl = new ETL_BIR(this.app, this.manifest, this.settings);
+		this.etl = new ETL_BIR(this.app, this.settings);
 	}
 
 	/**
@@ -18,16 +24,20 @@ export class ExternalRegistry {
 	 * @param      {string}                  searchTxt  The search text
 	 * @return     {Promise<Array<Object>>}  Array with several properties of the found companies, including ID
 	 */
-	async searchCompany(searchTxt: string): Promise<Array<Object>> {}
+	async searchCompany(searchTxt: string): Promise<Array<Object>> {
+		return this.etl.searchCompany(searchTxt);
+	}
 
 	/**
 	 * Get the company data by ID of current ETL Module.
 	 *
 	 * @param      {string}     in_ID   Company ID in ETl Module
-	 * @return     {Promise<{}>}  The company data dictionary or false is
-	 *                          something goes wrong.
+	 * @return     {Promise<{}>}  The company data dictionary or false if
+	 *                            something goes wrong.
 	 */
-	async getCompanyDataByID(in_ID: string): Promise<Object>
+	async getCompanyDataByID(in_ID: string): Promise<Object> {
+		return this.etl.getCompanyDataByID(in_ID);
+	}
 
 	/**
 	 * Creates a company note by their id in current ETL module.
@@ -47,14 +57,40 @@ export class ExternalRegistry {
 	/**
 	 * Creates a company note.
 	 *
-	 * @param      {dict}          compData          Dictionary of compnay data
+	 * @param      {Object}          compData          Dictionary of compnay data
 	 *                                               (from ETL module)
 	 * @param      {string}        insideFolderPath  Note will be created inside
 	 *                                               this folder
 	 * @return     {Promise<boo>}  This promise will be resolved to true or
 	 *                             false, based on result of internal processes.
 	 */
-	async createCompanyNote(compData: dict, insideFolderPath: string): Promise<boolean> {}
+	async createCompanyNote(compData: Object, insideFolderPath: string): Promise<boolean> {
+		const cname = compData['Наименование'].replace(this.settings.formOfPropertyRegexp, '$2 $1');
+		const folderPath = insideFolderPath + "/Россия/" + sanitizeName(cname);
+		if ( !(await this.createFolder(folderPath)) ) {
+			new Notice(`Ошибка создания каталога ${folderPath}!`, 3000);
+			return false;
+		}
+		await this.createFolder(folderPath + "/docs/" + moment().format("YYYY"));
+		await this.createFolder(folderPath + "/_media");
+		const notePath = normalizePath(folderPath + "/" + sanitizeName(cname + "_HQ") + ".md");
+		// const file = app.vault.getAbstractFileByPath(notePath);
+		const noteTFile = await app.vault.create(notePath, "");
+		const res = await this.runCompanyTemplate(noteTFile, compData);
+		if (res) {
+			new Notice(`Создана заметка \n${cname}`, 5000);
+		} else {
+			return false;
+		}
+
+		//Open in active view
+		if (this.settings.openAfterCreation) {
+			const active_leaf = this.app.workspace.getLeaf(false);
+			if (!active_leaf) { return true; }
+			await active_leaf.openFile(noteTFile, {state: { mode: "source" }, });
+		}
+		return true;
+	}
 
 	/**
 	 * Fill Company propreties from previously created Company Note
@@ -71,36 +107,40 @@ export class ExternalRegistry {
 		const recordType = meta?.frontmatter?.record_type;
 		if (!recordType || !['company_HQ', 'companyOffice'].includes(recordType))
 			return {};
-		const note = await this.app.cachedRead(compNote);
-		let regexp = {}
-		[
-			'ОГРН', 'ОКПО',
-			'Полное наименование', 'Сокращенное наименование', 'Наименование', 'Зарегистрирована',
-			'Адрес', 'email', 'Наименование на латинице', 'Организационно-правовая форма', 'Размер компании',
-			'Тип компании', 'Численность сотрудников', 'Уставный капитал', 'Режим налогообложения'
-		].forEach( (i) => regexp[i]=new RegExp(`- \*\*${i}\*\*:: (.*)\n`), "i");
-		// const regexp = {
-		// 	'fullName': /- \*\*Полное наименование\*\*:: (.*)\n/ig,
-		// 	'shortName': /- \*\*Сокращенное наименование\*\*:: (.*)\n/ig,
-		// 	'Наименование': /- \*\*Наименование\*\*:: (.*)\n/ig,
-		// 	'Зарегистрирована': /- \*\*Зарегистрирована\*\*:: (.*)\n/ig,
-		// 	'Адрес': /- \*\*Адрес\*\*:: (.*)\n/ig,
-		// 	'Адрес': /- \*\*Адрес\*\*:: (.*)\n/ig,
-		// }
+		const note = await this.app.vault.cachedRead(compNote);
+		if (taxID)
+			compData['ИНН'] = taxID;
 		let startPos = note.match(/^## Детальные сведения об организации\s+$/m);
 		if (!startPos.index)
 			return compData;
 		startPos = startPos.index;
-		const noteVarsStr = note.slice(startPos);
+		let noteVarsStr = note.slice(startPos);
 		let pMatch;
-		// Example regexp:  /- \*\*Полное наименование\*\*:: (.*)\n/ig
-		const pRegexp = /-\s+\*\*([^:\*]+)\*\*:: (.*)\n/ig;
+		let pRegexp;
+
+		// At first process string with 3 props in row: ИНН, ОГРН, ОКПО
+		let innStr = /^(\*\*ИНН\*\*:: .*)\n/m.exec(noteVarsStr);
+		if (innStr) {
+			// all other props should be at followed lines
+			startPos = innStr.index + innStr[1].length;
+			innStr = noteVarsStr.slice(innStr.index, innStr.index + innStr[1].length);
+			noteVarsStr = noteVarsStr.slice(startPos);
+			pRegexp = /\s*\*\*(\S+)\*\*:: (\d+)\s?/g;
+			while ((pMatch = pRegexp.exec(innStr)) !== null) {
+				const key = pMatch[1];
+				if (!compData.hasOwnProperty(key))
+					compData[key] = pMatch[2];
+			}
+		}
+
+		// Example regexp:  /- \*\*Полное наименование\*\*:: (.*)\n/g
+		pRegexp = /\s*-\s+\*\*([^:\*]+)\*\*:: (.*)\n/g;
 		while ((pMatch = pRegexp.exec(noteVarsStr)) !== null) {
 			const key = pMatch[1];
 			if (!compData.hasOwnProperty(key))
 				compData[key] = pMatch[2];
 		}
-		
+		return compData;
 	}
 
 	/**
@@ -112,6 +152,9 @@ export class ExternalRegistry {
 	async getLinkedPersonsForNote(compNote: TFile): Promise<Array> {
 		if (!this.isFileExists(compNote))
 			return [];
+		const compData = await this.getCompanyFromNote(compNote);
+		if (!compData)
+			return [];
 	}
 
 	getPathToComapnyTemplateDir(): string {
@@ -121,14 +164,14 @@ export class ExternalRegistry {
 		return this.getPathToComapnyTemplateDir() + "/new_company_HQ_tpl.md";
 	}
 	isFileExists(target: string | TFile): bool {
-		const path = (target instanceof string) ? normalizePath(target) : target.path;
-		const tfile = this.app.vault.getAbstractFileByPath(path);
-		if (tfile && (tfile instanceof TFIle))
+		const path = (typeof target === "string") ? normalizePath(target) : target.path;
+		const tfile = this.app.vault.getFileByPath(path);
+		if (tfile && (tfile instanceof TFile))
 			return true;
 		return false;
 	}
 	isFolderExists(target: string | TFile): bool {
-		const path = (target instanceof string) ? normalizePath(target) : target.path;
+		const path = (typeof target === "string") ? normalizePath(target) : target.path;
 		const folder = this.app.vault.getAbstractFileByPath(path);
 		if (folder && (folder instanceof TFolder))
 			return true;
@@ -150,7 +193,7 @@ export class ExternalRegistry {
 		return true;
 	}
 
-	private isTemplaterEnabled(): bool {return this.app?.plugins?.enabledPlugins?.has("templater-obsidian");}
+	private isTemplaterEnabled(): boolean {return this.app?.plugins?.enabledPlugins?.has("templater-obsidian");}
 	private getTemplater() {
 		const plugObj = this.app.plugins.plugins["templater-obsidian"];
 		if (!plugObj)
@@ -175,20 +218,19 @@ export class ExternalRegistry {
 		).parse_template({ target_file: dstFile, run_mode: 4 }, templateStr);
 	}
 
-	async runCompanyTemplate(noteFile: TFile, compData: dict): Promise {
+	async runCompanyTemplate(noteFile: TFile, compData: dict): Promise<boolean> {
 		if (!this.isTemplaterEnabled()) {
-			new Notice("Для использования шаблонов необходим установленный и запущенный Templater!", 3000);
+			new Notice("Для использования шаблонов необходим установленный и запущенный\n Templater!", 3000);
 			return false;
 		}
 		const templatePath = this.getPathToComapnyTemplate();
-		const self = this;
 		this.app.vault.adapter.read(templatePath).then( async (tplContent) => {
 			if (!tplContent.length) {
 				new Notice("Ошибка чтения файла шаблона!", 3000);
 				console.log("Ошибка чтения шаблона", templatePath);
 			} else {
-				const tplContentPack = self.getCompanyTplHeader(compData) + tplContent;
-				let modified = await self.runTemplater(tplContentPack, noteFile);
+				const tplContentPack = this.getCompanyTplHeader(compData) + tplContent;
+				let modified = await this.runTemplater(tplContentPack, noteFile);
 				if (compData['сайт'] && compData['сайт'].length) {
 					modified = modified.replace('Официальный сайт: ', `Официальный сайт: https://${compData['сайт'].trim()}/`);
 				}
@@ -205,8 +247,7 @@ export class ExternalRegistry {
 				let data2 = Object(compData);
 				data2 = Object.keys(compData)
 				.filter(key => !notallowed.includes(key))
-				.reduce((obj, key) => { obj[key] = data2[key]; return obj;
-				}, {});
+				.reduce((obj, key) => { obj[key] = data2[key]; return obj; }, {});
 
 				const dopCodes = dopCodesPrint(compData);
 				modified += "\n\n## Детальные сведения об организации\n\n";
@@ -216,7 +257,7 @@ export class ExternalRegistry {
 				modified += Object.entries(data2).map(([key, value]) => `- **${key}**:: ${value}`).join('\n');
 				modified += dopCodes.length ? '\n - **Дополнительные коды**:\n' + dopCodes : '';
 				modified += okved.length ? '\n\n### ОКВЭД\n' + okved + '\n' : '';
-				await self.app.vault.modify(noteFile, modified);
+				await this.app.vault.modify(noteFile, modified);
 
 				return true;
 			}
@@ -224,10 +265,14 @@ export class ExternalRegistry {
 	}
 
 	private getCompanyTplHeader(compData: dict): string {
-		const name = compData['Наименование'].replace(this.myPlugin.settings.formOfPropertyRegexp, '$2 $1').replaceAll('"', '');
+		const name = compData['Наименование'].replace(this.settings.formOfPropertyRegexp, '$2 $1').replaceAll('"', '');
+		const okopf_sub = ['30001', '30002', '30003', '30004'];
+		const recordType = (compData['ОКОПФ'] && okopf_sub.some( (i)=> compData['ОКОПФ'].startsWith(i)) ) ? 'companyOffice' : 'company_HQ';
+		console.log("recordType", recordType, compData['ОКОПФ']);
 		// const name = compData['Наименование'].replace(/^(АО |ООО |ПАО )/g, '').replaceAll('"', '');
 		let ret: string = `<%*
 function sanitizeName(t) { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_').replace(/_+/g, '_');}
+const recordType = "${recordType}";
 var pname = "${name}";
 const pnameCln = sanitizeName(pname);
 var country = "Россия";
@@ -242,4 +287,13 @@ const taxID = "${compData['ИНН'] ? compData['ИНН'] : ''}"`;
 		return ret;
 	}
 
+}
+
+/** prevent * " \ / < > : | ? in file name */
+function sanitizeName(t) {
+	return t.replaceAll(" ","_")
+		.replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_')
+		.replace(/^_+/g, '')
+		.replace(/_+$/g, '')
+		.replace(/_+/g, '_');
 }

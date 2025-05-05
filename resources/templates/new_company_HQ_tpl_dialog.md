@@ -50,7 +50,7 @@ dv.table(["Компания", "страна"], dv.pages('"Companies"').where(p =
 ```dataview
 TABLE office_country as "Страна"
 from #<% tagsString %> 
-where record_type="regional_office"
+where record_type="companyOffice"
 ```
 
 ### 👨‍💼Сотрудники 

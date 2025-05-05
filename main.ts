@@ -2,6 +2,7 @@ import { App, Editor, MarkdownView, Modal, SuggestModal, FuzzySuggestModal, Noti
 import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./src/settings/SettingsTab"
 import { requestUrl } from "obsidian";
 import { BIR, birGetByID } from './src/bir-tools.ts';
+import { ExternalRegistry } from './src/etl/extSources.ts';
 import { Person, Product, Project } from './src/RecordNotes.ts';
 import { selectPersonsDlg } from './src/ui-dialogs/selectPersons.ts'
 
@@ -132,6 +133,7 @@ export default class BirPlugin extends Plugin {
 			new Notice("Команда доступна только если в активной вкладке открыта заметка о компании taxID и record_type='company_HQ'");
 			return false;
 		}
+
 		const candidates = await this.birObj.getlinkedPersonsViaTaxID(taxID);
 		if (!candidates.length) {
 			new Notice("Не найдены в реестрах связанные с компанией лица");
