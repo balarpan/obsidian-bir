@@ -8,7 +8,7 @@ export class Person extends AbstractRecordNote {
 	readonly propsDefault = {fullName: null, birID: null, inn: null, positions:[], country: null, companyName: null, companyTaxID: null}
 	readonly propsRequired_list = ['fullName', 'companyTaxID'];
 
-	async AddByProperties( inProps: {}): Promise<bool> {
+	async AddByProperties( inProps: {}): Promise<boolean> {
 		let props = Object.assign({}, this.propsDefault, inProps);
 		const isPropsValid: bool = this.propsRequired_list.filter((it) => inProps.hasOwnProperty(it)).length == this.propsRequired_list.length;
 		if (!isPropsValid)

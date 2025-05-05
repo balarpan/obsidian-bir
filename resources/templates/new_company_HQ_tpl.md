@@ -3,7 +3,7 @@ aliases: '<% pname %>'
 tags: <% tagsString %> Company_HQ
 created_on:  <% tp.date.now("YYYY-MM-DD") %>
 <% (country ? 'country: "' + country + '"': 'country:') %>
-companyName: '<% pname %>'
+companyName: '<% shortName %>'
 <% taxID ? 'taxID: "' + taxID + '"' : 'taxID' %>
 Industry:
 parentCompany:

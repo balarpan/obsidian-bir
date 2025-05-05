@@ -1,6 +1,6 @@
 import { App, Editor, MarkdownView, Modal, SuggestModal, FuzzySuggestModal, Notice, Plugin, PluginManifest, Setting } from 'obsidian';
 import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./src/settings/SettingsTab"
-import { requestUrl, PluginManifest } from "obsidian";
+import { requestUrl } from "obsidian";
 import { BIR, birGetByID } from './src/bir-tools.ts';
 import { Person, Product, Project } from './src/RecordNotes.ts';
 import { selectPersonsDlg } from './src/ui-dialogs/selectPersons.ts'

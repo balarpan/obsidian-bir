@@ -160,7 +160,7 @@ export class BIR {
 
 				let okved = '';
 				function okvedPrint(obj): string { return obj.map(function(e, i){return '> - ' + e[0] + ' - ' + e[1]}).join('\n');}
-				function dopCodesPrint(obj): string { let ret =''; for(const k of dopCodesKeys) ret += '    - **' + k + '** - ' + obj[k] + '\n'; return ret;}
+				function dopCodesPrint(obj): string { let ret =''; for(const k of dopCodesKeys) ret += '    - **' + k + '**:: ' + obj[k] + '\n'; return ret;}
 				if (compData['ОКВЭД']) {
 					okved += compData['ОКВЭД']['Основной'] ? "\n> [!info] Основной\n" + okvedPrint(compData['ОКВЭД']['Основной']) + "\n" : '';
 					okved += compData['ОКВЭД']['Дополнительные'] ? "\n> [!info]- Дополнительный\n" + okvedPrint(compData['ОКВЭД']['Дополнительные']) + "\n" : '';
