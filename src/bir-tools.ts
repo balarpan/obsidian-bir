@@ -202,9 +202,11 @@ export class BIR {
 
 	getCompanyTplHeader(compData: dict): string {
 		const name = compData['Наименование'].replace(this.myPlugin.settings.formOfPropertyRegexp, '$2 $1').replaceAll('"', '');
+		const recordType = 'company_HQ';
 		// const name = compData['Наименование'].replace(/^(АО |ООО |ПАО )/g, '').replaceAll('"', '');
 		let ret: string = `<%*
 function sanitizeName(t) { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_').replace(/_+/g, '_');}
+const recordType = "${recordType}";
 var pname = "${name}";
 const pnameCln = sanitizeName(pname);
 var country = "Россия";

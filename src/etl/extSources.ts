@@ -8,6 +8,7 @@ export class ExternalRegistry {
 	private manifest: PluginManifest;
 	private settings: BirSettings;
 	private etl: Object;
+	private idCache: FIFO_TTL<number, Object>;
 	constructor(app: App, manifest: PluginManifest, settings: BirSettings) {
 		this.app = app;
 		this.manifest = JSON.parse(JSON.stringify(manifest)); // deep copy for safety reasons
@@ -16,6 +17,9 @@ export class ExternalRegistry {
 		// if ('BIR' === settings.extServiceName)
 		// 	this.etl = new ETL_BIR(this.app, this.manifest, this.settings);
 		this.etl = new ETL_BIR(this.app, this.settings);
+
+		//FIFO queue for 50 records and TTL = 2 hours
+		this.idCache = new FIFO_TTL<number, Object>(50, 1000 * 60 * 60 * 2 );
 	}
 
 	/**
@@ -36,6 +40,11 @@ export class ExternalRegistry {
 	 *                            something goes wrong.
 	 */
 	async getCompanyDataByID(in_ID: string): Promise<Object> {
+		const cached = this.idCache.get(in_ID);
+		console.log( cached );
+		if (cached)
+			return Promise.resolve(cached);
+
 		return this.etl.getCompanyDataByID(in_ID);
 	}
 
@@ -296,4 +305,39 @@ function sanitizeName(t) {
 		.replace(/^_+/g, '')
 		.replace(/_+$/g, '')
 		.replace(/_+/g, '_');
+}
+
+interface FIFO_TTL_item<V> {
+	val: V;
+	expiration: number;
+}
+/** FIFO with key-value items and expiring mechanism */
+export class FIFO_TTL <K,V>{
+	private readonly cache = new Map<K,FIFO_TTL_item<V>>();
+
+	constructor(private readonly maxSize: number, private readonly  max_ttl_ms: number) {}
+	public set(key: K, value: V) {
+		const exp = Date.now() + this.max_ttl_ms;
+		this.cache.delete(key);
+		this.cache.set(key, { value, exp });
+		if (this.maxSize < this.cache.size )
+			this.cache.delete( this.cache.keys().next().value ); // Map object use FIFO under the hood.
+	}
+
+	public get(key: K): V | undefined { return this._get(key)?.val; }
+	public get size(): number { return this.cache.size; }
+	public get isEmpty(): boolean { return this.cache.size === 0; }
+	public has(key: K): boolean { return !!this._get(key); }
+	public delete(key: K): boolean { return this.cache.delete(key); }
+	public clear() { this.cache.clear(); }
+
+	private _get(key: K): FIFO_TTL_item<V> | undefined {
+		const item = this.cache.get(key);
+		const isExpired = item && item.expiration ? (Date.now() >= item.expiration) : false;
+		if (!item || isExpired) {
+			this.cache.delete(key);
+			return undefined;
+		}
+		return item;
+	}
 }
