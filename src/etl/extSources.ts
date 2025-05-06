@@ -166,6 +166,10 @@ export class ExternalRegistry {
 			return [];
 	}
 
+
+	/** Get array of ID's for Company itself and their (if exists) branch offices */
+	getIDsForTaxID(taxID: string): Object {}
+
 	getPathToComapnyTemplateDir(): string {
 		return "/" + this.manifest.dir + "/resources/templates";
 	}
@@ -200,6 +204,12 @@ export class ExternalRegistry {
 			await this.app.vault.createFolder(pathCln);
 		} catch(err) { return false; }
 		return true;
+	}
+
+	/** Note: Company without 'ОКОПФ' record is treated as HQ (not a branch, etc.) */
+	private isCompanyBranch(compData: Object): boolean {
+		const branchOKOPF = ['30001', '30002', '30003', '30004'];
+		return compData['ОКОПФ'] && branchOKOPF.some( (i)=> compData['ОКОПФ'].startsWith(i) ? true : false;
 	}
 
 	private isTemplaterEnabled(): boolean {return this.app?.plugins?.enabledPlugins?.has("templater-obsidian");}
@@ -276,7 +286,7 @@ export class ExternalRegistry {
 	private getCompanyTplHeader(compData: dict): string {
 		const name = compData['Наименование'].replace(this.settings.formOfPropertyRegexp, '$2 $1').replaceAll('"', '');
 		const okopf_sub = ['30001', '30002', '30003', '30004'];
-		const recordType = (compData['ОКОПФ'] && okopf_sub.some( (i)=> compData['ОКОПФ'].startsWith(i)) ) ? 'companyOffice' : 'company_HQ';
+		const recordType = this.isCompanyBranch(compData) ? 'companyOffice' : 'company_HQ';
 		console.log("recordType", recordType, compData['ОКОПФ']);
 		// const name = compData['Наименование'].replace(/^(АО |ООО |ПАО )/g, '').replaceAll('"', '');
 		let ret: string = `<%*
