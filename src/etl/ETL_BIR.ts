@@ -3,6 +3,44 @@ import { BirSettings } from "./src/settings/SettingsTab"
 import { requestUrl } from "obsidian";
 
 
+interface FIFO_TTL_item<V> {
+	value: V;
+	expiration: number;
+}
+/** FIFO with key-value items and expiring mechanism. Use like a regular Map() object.*/
+export class FIFO_TTL <K,V>{
+	private readonly cache = new Map<K,FIFO_TTL_item<V>>();
+
+	constructor(private readonly maxSize: number, private readonly  max_ttl_ms: number) {}
+	public set(key: K, value: V) {
+		const exp = Date.now() + this.max_ttl_ms;
+		this.cache.delete(key);
+		this.cache.set(key, { value, exp });
+		if (this.maxSize < this.cache.size ) {
+			this.cache.delete( this.cache.keys().next().value ); // Map object use FIFO under the hood.
+		}
+	}
+
+	public get(key: K): V | undefined { return this._get(key)?.value; }
+	public get size(): number { return this.cache.size; }
+	public get isEmpty(): boolean { return this.cache.size === 0; }
+	public has(key: K): boolean { return !!this._get(key); }
+	public delete(key: K): boolean { return this.cache.delete(key); }
+	public clear() { this.cache.clear(); }
+
+	private _get(key: K): FIFO_TTL_item<V> | undefined {
+		const item = this.cache.get(key);
+		const isExpired = item && item.expiration ? (Date.now() >= item.expiration) : false;
+		if (!item || isExpired) {
+			this.cache.delete(key);
+			return undefined;
+		}
+		return item;
+	}
+}
+
+
+/** ETL module to get data from БИР Аналитик system. */
 export class ETL_BIR {
 	private app: App;
 	private settings: BirSettings;
@@ -10,18 +48,18 @@ export class ETL_BIR {
 	readonly companyBriefURL = 'https://site.birweb.1prime.ru/company-brief/';
 	readonly BIRconfigURL = 'https://site.birweb.1prime.ru/runtime-config.json';
 	BIRconfigService: Promise;
-	private idCache: FIFO_TTL<number, Object>;
-	private searchCache: FIFO_TTL<number, Object>;
+	private static idCache: FIFO_TTL<string, Object>;
+	private static searchCache: FIFO_TTL<string, Object>;
 
 	constructor(app: App, settings: BirSettings) {
 		this.app = app;
 		this.settings = settings;
 		this.BIRconfigService = requestUrl({url: this.BIRconfigURL,cmethod: "GET"});
 
-		//FIFO queue for 50 records and TTL = 2 hours
-		this.idCache = new FIFO_TTL<number, Object>(50, 1000 * 60 * 60 * 2 );
+		// FIFO queue for 50 records and TTL = 2 hours
+		this.idCache = new FIFO_TTL<string, Object>(50, 1000 * 60 * 60 * 2 );
 		// 10 minutes for search requests
-		this.searchCache = new FIFO_TTL<number, Object>(50, 1000 * 60 * 10 );
+		this.searchCache = new FIFO_TTL<string, Object>(50, 1000 * 60 * 10 );
 	}
 
 	async getBIRconfig(): Promise<Dict> {
@@ -31,15 +69,21 @@ export class ETL_BIR {
 	}
 
 	async searchCompany(searchTxt: string): Promise<Array<Object>> {
-		const srchValue = searchTxt;
-		const cached = this.searchCache.get(srchValue);
+		const cached = this.searchCache.get(searchTxt);
 		if (cached)
 			return Promise.resolve(cached);
-		if (!srchValue.length || 2>srchValue.length ) {
-			new Notice("Укажите как минимум три символа для начала поиска!", 4000)
+		if (!searchTxt.length || 2>searchTxt.length ) {
+			new Notice("Укажите как минимум три символа для поиска организации!", 4000)
 			return [];
 		}
 
+		const ret = await this._searchCompany(searchTxt);
+		this.searchCache.set(searchTxt, ret);
+		return ret;
+	}
+
+	private async _searchCompany(searchTxt: string): Promise<Array<Object>> {
+		const srchValue = searchTxt;
 		const birServices = await this.getBIRconfig();
 		const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&take=20&term=';
 
@@ -241,40 +285,3 @@ export class ETL_BIR {
 }
 
 const stripHTMLTags = (str) => str.replace(/<[^>]*>/g, "");
-
-interface FIFO_TTL_item<V> {
-	value: V;
-	expiration: number;
-}
-/** FIFO with key-value items and expiring mechanism */
-export class FIFO_TTL <K,V>{
-	private readonly cache = new Map<K,FIFO_TTL_item<V>>();
-
-	constructor(private readonly maxSize: number, private readonly  max_ttl_ms: number) {}
-	public set(key: K, value: V) {
-		const exp = Date.now() + this.max_ttl_ms;
-		this.cache.delete(key);
-		this.cache.set(key, { value, exp });
-		if (this.maxSize < this.cache.size ) {
-			const toDelete = this.cache.delete( this.cache.keys().next().value ); // Map object use FIFO under the hood.
-			this.cache.delete(toDelete);
-		}
-	}
-
-	public get(key: K): V | undefined { return this._get(key)?.value; }
-	public get size(): number { return this.cache.size; }
-	public get isEmpty(): boolean { return this.cache.size === 0; }
-	public has(key: K): boolean { return !!this._get(key); }
-	public delete(key: K): boolean { return this.cache.delete(key); }
-	public clear() { this.cache.clear(); }
-
-	private _get(key: K): FIFO_TTL_item<V> | undefined {
-		const item = this.cache.get(key);
-		const isExpired = item && item.expiration ? (Date.now() >= item.expiration) : false;
-		if (!item || isExpired) {
-			this.cache.delete(key);
-			return undefined;
-		}
-		return item;
-	}
-}

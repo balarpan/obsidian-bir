@@ -96,6 +96,7 @@ export default class BirPlugin extends Plugin {
 		const a = new ExternalRegistry(this.app, this.manifest, this.settings);
 		const compData = await a.getHQforTaxID('2607018122');
 		console.log("returned",  compData );
+		console.log("returned2", await a.getHQforTaxID('2607018122'));
 		return;
 		// !!!!!!!!!!!!!!!!
 		new CompanyFindModal(this.app, (result) => {
