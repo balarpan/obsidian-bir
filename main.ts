@@ -92,6 +92,12 @@ export default class BirPlugin extends Plugin {
 
 	/** Opens a dialog to search for a company in external sources and create a note */
 	async findCreateCompany() {
+		// !!!!!!!!!!!!!!!!
+		const a = new ExternalRegistry(this.app, this.manifest, this.settings);
+		const compData = await a.getHQforTaxID('2607018122');
+		console.log("returned",  compData );
+		return;
+		// !!!!!!!!!!!!!!!!
 		new CompanyFindModal(this.app, (result) => {
 			const res = this.birObj.birSearch(result)
 			res.then((found) => {

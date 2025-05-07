@@ -10,11 +10,18 @@ export class ETL_BIR {
 	readonly companyBriefURL = 'https://site.birweb.1prime.ru/company-brief/';
 	readonly BIRconfigURL = 'https://site.birweb.1prime.ru/runtime-config.json';
 	BIRconfigService: Promise;
+	private idCache: FIFO_TTL<number, Object>;
+	private searchCache: FIFO_TTL<number, Object>;
 
 	constructor(app: App, settings: BirSettings) {
 		this.app = app;
 		this.settings = settings;
 		this.BIRconfigService = requestUrl({url: this.BIRconfigURL,cmethod: "GET"});
+
+		//FIFO queue for 50 records and TTL = 2 hours
+		this.idCache = new FIFO_TTL<number, Object>(50, 1000 * 60 * 60 * 2 );
+		// 10 minutes for search requests
+		this.searchCache = new FIFO_TTL<number, Object>(50, 1000 * 60 * 10 );
 	}
 
 	async getBIRconfig(): Promise<Dict> {
@@ -25,6 +32,9 @@ export class ETL_BIR {
 
 	async searchCompany(searchTxt: string): Promise<Array<Object>> {
 		const srchValue = searchTxt;
+		const cached = this.searchCache.get(srchValue);
+		if (cached)
+			return Promise.resolve(cached);
 		if (!srchValue.length || 2>srchValue.length ) {
 			new Notice("Укажите как минимум три символа для начала поиска!", 4000)
 			return [];
@@ -45,6 +55,7 @@ export class ETL_BIR {
 				item.fullName = div.textContent || div.innerText || "";
 				return item;
 			})
+			this.searchCache.set(srchValue, found);
 			return found;
 
 		} catch (err) {
@@ -54,7 +65,38 @@ export class ETL_BIR {
 		}
 	}
 
-	async getCompanyDataByID(birID: string): Promise<Object> {
+	async getHQforTaxID(taxID: string): Promise<Object> {
+		let candidates;
+		try {
+			candidates = (await this.searchCompany(taxID)).filter((i) => i.objectType === 0 && stripHTMLTags(i.inn) === taxID);
+		} catch (err) {
+			console.log("Error during searching company HQ", err);
+			return {};
+		}
+		const entities = await Promise.all(
+			candidates.map(async (i) => {return await this.getCompanyDataByID(i.id);})
+			);
+		const found = entities.filter( (i) => !this.isCompanyBranch(i));
+		return found.length === 1 ? found[0] : {};
+	}
+
+	/** Note: Company without 'ОКОПФ' record is treated as HQ (not a branch, etc.) */
+	private isCompanyBranch(compData: Object): boolean {
+		const branchOKOPF = ['30001', '30002', '30003', '30004'];
+		return compData['ОКОПФ'] && branchOKOPF.some( (i)=> compData['ОКОПФ'].startsWith(i)) ? true : false;
+	}
+
+	async getCompanyDataByID(in_ID: string): Promise<Object> {
+		const cached = this.idCache.get(in_ID);
+		if (cached)
+			return Promise.resolve(cached);
+
+		const ret = await this._getCompanyDataByID(in_ID);
+		this.idCache.set(in_ID, ret);
+		return ret;
+	}
+
+	async _getCompanyDataByID(birID: string): Promise<Object> {
 		const url = this.companyBriefURL + encodeURIComponent(birID);
 
 		/** Helper function for parsing HTML DOM **/
@@ -195,5 +237,44 @@ export class ETL_BIR {
 			console.warn('BIR by ID. Something went wrong.', err);
 			return false;
 		});
+	}
+}
+
+const stripHTMLTags = (str) => str.replace(/<[^>]*>/g, "");
+
+interface FIFO_TTL_item<V> {
+	value: V;
+	expiration: number;
+}
+/** FIFO with key-value items and expiring mechanism */
+export class FIFO_TTL <K,V>{
+	private readonly cache = new Map<K,FIFO_TTL_item<V>>();
+
+	constructor(private readonly maxSize: number, private readonly  max_ttl_ms: number) {}
+	public set(key: K, value: V) {
+		const exp = Date.now() + this.max_ttl_ms;
+		this.cache.delete(key);
+		this.cache.set(key, { value, exp });
+		if (this.maxSize < this.cache.size ) {
+			const toDelete = this.cache.delete( this.cache.keys().next().value ); // Map object use FIFO under the hood.
+			this.cache.delete(toDelete);
+		}
+	}
+
+	public get(key: K): V | undefined { return this._get(key)?.value; }
+	public get size(): number { return this.cache.size; }
+	public get isEmpty(): boolean { return this.cache.size === 0; }
+	public has(key: K): boolean { return !!this._get(key); }
+	public delete(key: K): boolean { return this.cache.delete(key); }
+	public clear() { this.cache.clear(); }
+
+	private _get(key: K): FIFO_TTL_item<V> | undefined {
+		const item = this.cache.get(key);
+		const isExpired = item && item.expiration ? (Date.now() >= item.expiration) : false;
+		if (!item || isExpired) {
+			this.cache.delete(key);
+			return undefined;
+		}
+		return item;
 	}
 }
