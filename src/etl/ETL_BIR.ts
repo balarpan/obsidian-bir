@@ -1,85 +1,23 @@
 import { App, Notice, TFile, TFolder} from 'obsidian';
-import { BirSettings } from "./src/settings/SettingsTab"
 import { requestUrl } from "obsidian";
-
-
-interface FIFO_TTL_item<V> {
-	value: V;
-	expiration: number;
-}
-/** FIFO with key-value items and expiring mechanism. Use like a regular Map() object.*/
-export class FIFO_TTL <K,V>{
-	private readonly cache = new Map<K,FIFO_TTL_item<V>>();
-
-	constructor(private readonly maxSize: number, private readonly  max_ttl_ms: number) {}
-	public set(key: K, value: V) {
-		const exp = Date.now() + this.max_ttl_ms;
-		this.cache.delete(key);
-		this.cache.set(key, { value, exp });
-		if (this.maxSize < this.cache.size ) {
-			this.cache.delete( this.cache.keys().next().value ); // Map object use FIFO under the hood.
-		}
-	}
-
-	public get(key: K): V | undefined { return this._get(key)?.value; }
-	public get size(): number { return this.cache.size; }
-	public get isEmpty(): boolean { return this.cache.size === 0; }
-	public has(key: K): boolean { return !!this._get(key); }
-	public delete(key: K): boolean { return this.cache.delete(key); }
-	public clear() { this.cache.clear(); }
-
-	private _get(key: K): FIFO_TTL_item<V> | undefined {
-		const item = this.cache.get(key);
-		const isExpired = item && item.expiration ? (Date.now() >= item.expiration) : false;
-		if (!item || isExpired) {
-			this.cache.delete(key);
-			return undefined;
-		}
-		return item;
-	}
-}
+import { AbstractETL } from "./AbstractETL";
 
 
 /** ETL module to get data from БИР Аналитик system. */
-export class ETL_BIR {
-	private app: App;
-	private settings: BirSettings;
-	private cacheCompByID = {};
+export class ETL_BIR extends AbstractETL {
 	readonly companyBriefURL = 'https://site.birweb.1prime.ru/company-brief/';
 	readonly BIRconfigURL = 'https://site.birweb.1prime.ru/runtime-config.json';
 	BIRconfigService: Promise;
-	private static idCache: FIFO_TTL<string, Object>;
-	private static searchCache: FIFO_TTL<string, Object>;
 
 	constructor(app: App, settings: BirSettings) {
-		this.app = app;
-		this.settings = settings;
+		super(app, settings);
 		this.BIRconfigService = requestUrl({url: this.BIRconfigURL,cmethod: "GET"});
-
-		// FIFO queue for 50 records and TTL = 2 hours
-		this.idCache = new FIFO_TTL<string, Object>(50, 1000 * 60 * 60 * 2 );
-		// 10 minutes for search requests
-		this.searchCache = new FIFO_TTL<string, Object>(50, 1000 * 60 * 10 );
 	}
 
 	async getBIRconfig(): Promise<Dict> {
 		return new Promise((resolve, reject) => {
 			this.BIRconfigService.then((resp) => {resolve(resp.json);}).catch((err) => {reject(err);});
 		});
-	}
-
-	async searchCompany(searchTxt: string): Promise<Array<Object>> {
-		const cached = this.searchCache.get(searchTxt);
-		if (cached)
-			return Promise.resolve(cached);
-		if (!searchTxt.length || 2>searchTxt.length ) {
-			new Notice("Укажите как минимум три символа для поиска организации!", 4000)
-			return [];
-		}
-
-		const ret = await this._searchCompany(searchTxt);
-		this.searchCache.set(searchTxt, ret);
-		return ret;
 	}
 
 	private async _searchCompany(searchTxt: string): Promise<Array<Object>> {
@@ -124,23 +62,7 @@ export class ETL_BIR {
 		return found.length === 1 ? found[0] : {};
 	}
 
-	/** Note: Company without 'ОКОПФ' record is treated as HQ (not a branch, etc.) */
-	private isCompanyBranch(compData: Object): boolean {
-		const branchOKOPF = ['30001', '30002', '30003', '30004'];
-		return compData['ОКОПФ'] && branchOKOPF.some( (i)=> compData['ОКОПФ'].startsWith(i)) ? true : false;
-	}
-
-	async getCompanyDataByID(in_ID: string): Promise<Object> {
-		const cached = this.idCache.get(in_ID);
-		if (cached)
-			return Promise.resolve(cached);
-
-		const ret = await this._getCompanyDataByID(in_ID);
-		this.idCache.set(in_ID, ret);
-		return ret;
-	}
-
-	async _getCompanyDataByID(birID: string): Promise<Object> {
+	private async _getCompanyDataByID(birID: string): Promise<Object> {
 		const url = this.companyBriefURL + encodeURIComponent(birID);
 
 		/** Helper function for parsing HTML DOM **/
@@ -281,6 +203,50 @@ export class ETL_BIR {
 			console.warn('BIR by ID. Something went wrong.', err);
 			return false;
 		});
+	}
+
+	async getlinkedPersonsViaTaxID(taxID: string): Array {
+		try {
+			const birServices = await this.getBIRconfig();
+			const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&subjectType=0&take=20&term=' + taxID;
+			let searchRes = await requestUrl({url: searchURL, cmethod: 'GET'}).json;
+			const companies = searchRes.filter((item) => (item.objectType == 0 && stripHTMLTags(item.inn) == taxID) );
+			// if (companies.length > 1) {
+			// 	new Notice("Найдено в реестре более чем одна компания с таким ИНН.\nНевозможно продолжить операцию!", 6000);
+			// 	return [];
+			// }
+			if (!companies.length)
+				return [];
+			const companyIDs = companies.map((i) => i.id);
+			const candidateFilter = (linkedPos) => linkedPos.filter(
+				(pos) => pos.linkedCompanies && pos.linkedCompanies.filter((cp) => companyIDs.includes(cp.companyId)).length
+				);
+
+			searchRes = await requestUrl({
+				url: birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&subjectType=1&take=20&term=' + taxID,
+				cmethod: 'GET'
+			}).json;
+			const candidates = searchRes.filter(
+				(item) => (item.objectType == 1 && item?.linkedPositions && candidateFilter(item?.linkedPositions))
+				);
+			let persons = [];
+			for (let pers of candidates) {
+				const positions_set = new Set( pers.linkedPositions.map((pos) => pos.position) );
+				persons.push({
+					fullName: pers.fullName,
+					birID: pers.id,
+					inn: stripHTMLTags(pers.inn),
+					positions: Array.from(positions_set),
+					// companyFullName: company.fullName,
+					companyTaxID: taxID,
+					country: 'Россия'
+				});
+			}
+			return persons;
+		} catch (error) {
+			console.error("Error getting BIR config params. Stopping", error);
+			return [];
+		}
 	}
 }
 

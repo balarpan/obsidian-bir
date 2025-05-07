@@ -1,14 +1,14 @@
 import { App, Editor, MarkdownView, Modal, SuggestModal, FuzzySuggestModal, Notice, Plugin, PluginManifest, Setting } from 'obsidian';
 import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./src/settings/SettingsTab"
 import { requestUrl } from "obsidian";
-import { BIR, birGetByID } from './src/bir-tools.ts';
+// import { BIR, birGetByID } from './src/bir-tools.ts';
 import { ExternalRegistry } from './src/etl/extSources.ts';
 import { Person, Product, Project } from './src/RecordNotes.ts';
 import { selectPersonsDlg } from './src/ui-dialogs/selectPersons.ts'
 
 export default class BirPlugin extends Plugin {
 	settings: BirSettings;
-	private birObj: BIR;
+	private etlObj: BIR;
 	public manifest: PluginManifest;
 
 	constructor(app: App, manifest: PluginManifest) {
@@ -19,13 +19,7 @@ export default class BirPlugin extends Plugin {
 	get plugin_is_enabled() { return this.app?.plugins?.enabledPlugins?.has(this.manifest.id); }
 	async onload() {
 		await this.loadSettings();
-		this.birObj = new BIR(this.app, this);
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		// const candidates = await this.birObj.getlinkedPersonsViaTaxID('7727272169');
-		// const pers = new Person(this.app, this);
-		// const b = await pers.getCompanyNoteByTaxID('7727272169');
-		// const c = await pers.AddByProperties(candidates[1]);
-		// console.log("recieved", c);
+		this.etlObj = new ExternalRegistry(this.app, this.manifest, this.settings);
 
 		// This creates an icon in the left ribbon.
 		if (this.settings.ribbonButton) {
@@ -86,21 +80,22 @@ export default class BirPlugin extends Plugin {
 			// birGetByID(selected.id).then( (birdata) => {
 			// 	console.log("got!", birdata);
 			// });
-			this.birObj.noteCompany_HQ(selected.id, this.settings.companiesFolder);
+			this.etlObj.createCompanyNoteByID(selected.id, this.settings.companiesFolder);
 		}).open();
 	}
 
 	/** Opens a dialog to search for a company in external sources and create a note */
 	async findCreateCompany() {
 		// !!!!!!!!!!!!!!!!
-		const a = new ExternalRegistry(this.app, this.manifest, this.settings);
-		const compData = await a.getHQforTaxID('2607018122');
-		console.log("returned",  compData );
-		console.log("returned2", await a.getHQforTaxID('2607018122'));
-		return;
+		// const a = new ExternalRegistry(this.app, this.manifest, this.settings);
+		// // const compData = await a.getHQforTaxID('2607018122');
+		// // console.log("returned",  compData );
+		// // console.log("returned2", await a.getHQforTaxID('2607018122'));
+		// console.log("Persons", await a.getLinkedPersonsForTaxID('2607018122'));
+		// return;
 		// !!!!!!!!!!!!!!!!
 		new CompanyFindModal(this.app, (result) => {
-			const res = this.birObj.birSearch(result)
+			const res = this.etlObj.searchCompany(result)
 			res.then((found) => {
 				//only companies, not linked persons
 				const foundCompanies = found.filter( (item)=> 0 == item.objectType );
@@ -122,7 +117,7 @@ export default class BirPlugin extends Plugin {
 		const selectionTxt = this.getCurrentSelection(editor);
 		if ( 2 > selectionTxt.length ) {new Notice("Выделите хотя бы три символа для начала поиска!"); return;}
 
-		const res = this.birObj.birSearch(selectionTxt)
+		const res = this.etlObj.searchCompany(selectionTxt)
 		res.then((found) => {
 			this.companySelect(found);
 		})
@@ -141,7 +136,7 @@ export default class BirPlugin extends Plugin {
 			return false;
 		}
 
-		const candidates = await this.birObj.getlinkedPersonsViaTaxID(taxID);
+		const candidates = await this.etlObj.getLinkedPersonsForTaxID(taxID);
 		if (!candidates.length) {
 			new Notice("Не найдены в реестрах связанные с компанией лица");
 			return false;

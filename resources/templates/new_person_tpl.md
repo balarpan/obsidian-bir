@@ -3,7 +3,7 @@
 <% (tagStr ? 'tags: "' + tagStr +'"': 'tags:')  %>
 created_on: <% tp.date.now("YYYY-MM-DD") %>
 <% (countryResidence ? 'country_residence: "' + countryResidence + '"' : 'country_residence:') %>
-<% (companyName  ? 'company: "' + companyName + '"' : 'company:') %>
+<% (companyName  ? 'company: "' + companyName.replaceAll('"', '\\\"') + '"' : 'company:') %>
 office:
 office_country:
 record_type: personNote
@@ -23,7 +23,7 @@ email::
 ## Биография
 
 ## Расположение
-Страна:: <% countryResidence %>
+Страна:: <% countryResidence && countryResidence.length ? countryResidence : '' %>
 Город:: 
 Компания:: <% (companyName ? '[['+companyNoteFile+'|'+companyName+']]' : null) %>
 Должность:: <% positions && positions.length ?  positions : '' %>

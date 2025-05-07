@@ -150,6 +150,10 @@ export class ExternalRegistry {
 		return compData['ОКОПФ'] && branchOKOPF.some( (i)=> compData['ОКОПФ'].startsWith(i)) ? true : false;
 	}
 
+
+	async getLinkedPersonsForTaxID(taxID: string): Promise<Array> {
+		return this.etl.getlinkedPersonsViaTaxID(taxID);
+	}
 	/**
 	 * Get all relevant persons for existing Company Note.
 	 *
@@ -160,8 +164,19 @@ export class ExternalRegistry {
 		if (!this.isFileExists(compNote))
 			return [];
 		const compData = await this.getCompanyFromNote(compNote);
-		if (isCompanyBranch(compData))
-			return [];
+		// Same TaxID. No need for code below
+		// if (isCompanyBranch(compData)) {
+		// 	if (!compData['ИНН'])
+		// 		return [];
+		// 	compData = await this.getHQforTaxID(compData['ИНН']);
+		// 	if (!compData || !compData.length || isCompanyBranch(compData)) {
+		// 		new Notice("Не удалось найти запись в реестре об открытой компании.", 4000);
+		// 		return [];
+		// 	}
+		// }
+		
+		return compData['ИНН'] ? this.getlinkedPersonsViaTaxID(compData['ИНН']) : [];
+
 	}
 
 	/** Get company itself, not a company branch */
@@ -280,7 +295,6 @@ export class ExternalRegistry {
 		const name = compData['Наименование'].replace(this.settings.formOfPropertyRegexp, '$2 $1').replaceAll('"', '');
 		const okopf_sub = ['30001', '30002', '30003', '30004'];
 		const recordType = this.isCompanyBranch(compData) ? 'companyOffice' : 'company_HQ';
-		console.log("recordType", recordType, compData['ОКОПФ']);
 		// const name = compData['Наименование'].replace(/^(АО |ООО |ПАО )/g, '').replaceAll('"', '');
 		let ret: string = `<%*
 function sanitizeName(t) { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_').replace(/_+/g, '_');}

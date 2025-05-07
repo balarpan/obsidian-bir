@@ -31,7 +31,8 @@ export class Person extends AbstractRecordNote {
 		}
 		await this.createFolder(folderPath + "/_media");
 		const ename = this.sanitizeLite(props.fullName);
-		const noteFName = "@" + ename + (props.companyName ? ' ' + this.sanitizeLite(props.companyName) : '');
+		const cname = props.companyName ? sanitizeName(props.companyName.replace(this.myPlugin.settings.formOfPropertyRegexp, '$2 $1')) : '';
+		const noteFName = "@" + ename + (cname ? ` ${cname}` : '');
 		const notePath = normalizePath(folderPath + "/" + noteFName + ".md");
 		const noteTFile = await app.vault.create(notePath, "");
 		const tplHeader = this.getNewNoteTplHeader(props);
@@ -66,12 +67,12 @@ export class Person extends AbstractRecordNote {
 function sanitizeName(t) { return t.replaceAll(" ","_").replace(/[&\/\\#,+()$~%.'":*?<>{}]/g,'_').replace(/_+/g, '_');}
 function sanitizeFIO(t) { return t.replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_').replace(/_+/g, '_');}
 const ename = '${sanitizeLite(props.fullName)}';
-const companyName = ${props.companyName ? '"' + sanitizeLite(props.companyName) + '"' : 'null'};
+const companyName = ${props.companyName ? '"' + props.companyName.replaceAll('"', '\\\"') + '"' : 'null'};
 const companyNoteFile = ${props.companyFileName ? '"' + props.companyFileName + '"' : 'null'};
 const titleName = "@" + ename + (companyName ? ' ' + companyName : '');
-const tagStr = ${props.companyName ? '"Company/'  + (props.companyCountry ? props.companyCountry+'/' : '') + sanitizeName(props.companyName) + '"' : null};
+const tagStr = ${props.companyName ? '"Company/'  + (props.companyCountry ? props.companyCountry+'/' : '') + sanitizeName(props.companyName.replace(this.myPlugin.settings.formOfPropertyRegexp, '$2 $1').replaceAll('"', '')) + '"' : null};
 const countryResidence = ${props.countryResidence ? '"' + props.countryResidence + '"' : 'null'};
-const company = ${props.companyName ? '"' + props.companyName + '"' : 'null'};
+const company = ${props.companyName ? '"' + sanitizeLite(props.companyName) + '"' : 'null'};
 const taxID = ${props.inn ? '"' + props.inn + '"' : ''};
 const companyTaxID = ${props.companyTaxID ? '"' + props.companyTaxID + '"' : 'null'};
 const birID = ${props.birID ? '"' + props.birID + '"' : ''};
@@ -91,4 +92,14 @@ export class Product extends AbstractRecordNote {
 /** Project Note */
 export class Project extends AbstractRecordNote {
 	readonly tempalteDialogFName = "new_project_tpl_dialog.md";
+}
+
+
+/** prevent * " \ / < > : | ? in file name */
+function sanitizeName(t) {
+	return t.replaceAll(" ","_")
+		.replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_')
+		.replace(/^_+/g, '')
+		.replace(/_+$/g, '')
+		.replace(/_+/g, '_');
 }
