@@ -304,6 +304,7 @@ const pnameCln = sanitizeName(pname);
 var country = "Россия";
 const titleName = pnameCln + "_HQ";
 const shortName = "${compData['Наименование'].replaceAll('"','\\\"')}";
+const shortNameEscaped = shortName.replaceAll('"','\\\"');
 const fullNameTitle = "${compData['Полное наименование'].replaceAll('"','\\\"')}";
 const companyAddress = "${compData['Адрес'] ? compData['Адрес'].replaceAll('"','\\\"') : ''}";
 const companyStatus = "${compData['Статус'] ? compData['Статус'].replaceAll('"','\\\"') : ''}";

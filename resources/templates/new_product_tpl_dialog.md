@@ -39,7 +39,7 @@ let cSelected = {name:null, country:null, filename:null}
 if ( companiesData.length ) {
 	let sel = await tp.system.suggester(
 		companiesData.map(i => i.selName),
-		companiesData, false, 'Выберите Компанию (опционально) или нажмите <Esc>'
+		companiesData, false, 'Выберите организацию (опционально) или нажмите <Esc>'
 		);
 	cSelected = ( sel ? sel : cSelected );
 }
@@ -55,9 +55,9 @@ if (!tp.file.exists(pFolder)) {
 	await this.app.vault.createFolder(pFolder);
 }
 
-const tagsPrep = cSelected.name ? cSelected.name + '/' + sanitizeName(pName) : sanitizeName(pName);
+const tagsPrep = cSelected.name ? cSelected.filename.replace(/_HQ$/, '') + '/' + sanitizeName(pName) : sanitizeName(pName);
 const tagsString =  "Product/" +  tagsPrep;
-const titleName = sanitizeLite(pName) + (cSelected.filename ? ' ' + sanitizeLite(cSelected.name) : '');
+const titleName = sanitizeLite(pName) + (cSelected.filename ? ' ' + sanitizeLite(cSelected.filename.replace(/_HQ$/, '')) : '');
 if ( await tp.file.exists(pFolder + titleName + ".md") ) {
 	tp.system.prompt("Заметка " + pFolder + titleName +
 	 " уже существует! Переименуйте её либо задайте другое название. Нажмите <Enter> для выхода.");
@@ -74,7 +74,7 @@ tags: <% tagsString %>
 productName: "<% pName %>"
 created_on: <% tp.date.now("YYYY-MM-DD") %>
 <% (country ? 'country: "' + country + '"': 'country:') %>
-<% (cSelected.name ? 'owner: "' + cSelected.name + '"' : 'owner:') %>
+<% (cSelected.name ? 'owner: "' + cSelected.name.replaceAll('\"', '\\\"') + '"' : 'owner:') %>
 record_type: productNote
 ---
 

@@ -55,9 +55,9 @@ if ( await tp.file.exists("/Persons/" + titleName + ".md") ) {
 }
 await tp.file.rename(titleName);
 await tp.file.move("/Persons/" + titleName);
-var tagStr = null
+var tagStr = 'Person';
 if ( cSelected.filename ) {
-	tagStr = 'Company/' + (cSelected.country ? cSelected.country+'/' : '') + sanitizeName(cSelected.name)
+	tagStr = 'Person/Company/' + (cSelected.country ? cSelected.country+'/' : '') + sanitizeName(cSelected.name)
 }
 new Notice(`Новая запись: ${ename}`, 3000);
 

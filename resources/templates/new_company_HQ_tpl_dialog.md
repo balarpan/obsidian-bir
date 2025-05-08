@@ -57,7 +57,7 @@ where record_type="companyOffice"
 
 ```dataview
 TABLE WITHOUT ID link(file.name,ФИО) as "ФИО", country_residence as "Страна", Город, Должность, link(Фото,"50") as "Фото", dateformat(row.file.mtime, "yyyy-MM-dd") as "Обновлено"
-from #<% tagsString %> 
+from #Pesron/<% tagsString %> 
 where record_type="personNote"
 sort Страна, ФИО
 ```
@@ -68,13 +68,13 @@ sort Страна, ФИО
 ### Продукты и сервисы
 ```dataview
 LIST WITHOUT ID link(file.name, productName) FROM "Products"
-WHERE owner="<% pname %>" and record_type="productNote"
+WHERE owner="<% pname.replaceAll('"','\\\"') %>" and record_type="productNote"
 ```
 
 ### Проекты
 ```dataview
 TABLE WITHOUT ID link(file.name, projectName) as Проект, статус, начало, окончание FROM "Projects"
-WHERE record_type="projectNote" and projectOwner="<% pname %>"
+WHERE record_type="projectNote" and projectOwner="<% pname.replaceAll('"','\\\"') %>"
 ```
 
 ## Ключевые клиенты
