@@ -79,7 +79,7 @@ export class ExternalRegistry {
 		const noteTFile = await app.vault.create(notePath, "");
 		const res = await this.runCompanyTemplate(noteTFile, compData);
 		if (res) {
-			new Notice(`Создана заметка \n${cname}`, 5000);
+			new Notice(`Создана заметка \n${sanitizeName(cname)}`, 5000);
 		} else {
 			return false;
 		}
@@ -87,8 +87,9 @@ export class ExternalRegistry {
 		//Open in active view
 		if (this.settings.openAfterCreation) {
 			const active_leaf = this.app.workspace.getLeaf(false);
-			if (!active_leaf) { return true; }
-			await active_leaf.openFile(noteTFile, {state: { mode: "source" }, });
+			if (active_leaf) {
+				await active_leaf.openFile(noteTFile, {state: { mode: "source" }, });
+			}
 		}
 		return true;
 	}
@@ -184,6 +185,16 @@ export class ExternalRegistry {
 		return taxID.length === 10 ? await this.etl.getHQforTaxID(taxID) : {};
 	}
 
+	async getBranchesForTaxID(taxID: string): Promise<Array> {
+		return this.etl.getBranchesForTaxID(taxID);
+	}
+	async getBranchesForNote(compNote: TFile): Promise<Array> {
+		if (!this.isFileExists(compNote))
+			return [];
+		const compData = await this.getCompanyFromNote(compNote);
+		return compData['ИНН'] ? this.getBranchesForTaxID(compData['ИНН']) : [];
+	}
+
 	getPathToComapnyTemplateDir(): string {
 		return "/" + this.manifest.dir + "/resources/templates";
 	}
@@ -251,7 +262,7 @@ export class ExternalRegistry {
 			return false;
 		}
 		const templatePath = this.getPathToComapnyTemplate();
-		this.app.vault.adapter.read(templatePath).then( async (tplContent) => {
+		return this.app.vault.adapter.read(templatePath).then( async (tplContent) => {
 			if (!tplContent.length) {
 				new Notice("Ошибка чтения файла шаблона!", 3000);
 				console.log("Ошибка чтения шаблона", templatePath);

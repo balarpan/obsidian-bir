@@ -76,3 +76,19 @@
   font-size: var(--font-ui-medium);
   line-height: var(--line-height-tight);
 }
+
+.bir_progress_modal_cnt {margin: 0.5em 1em;}
+.bir_progress_inf_cnt {}
+.bir_progress_inf {
+  height: 4px;
+  width: 100%;
+  --c:no-repeat linear-gradient(var(--interactive-accent-hover) 0 0);
+  background: var(--c),var(--c),var(--interactive-hover);
+  background-size: 60% 100%;
+  animation: bir_progress_aim 3s infinite;
+}
+@keyframes bir_progress_aim {
+  0%   {background-position:-150% 0,-150% 0}
+  66%  {background-position: 250% 0,-150% 0}
+  100% {background-position: 250% 0, 250% 0}
+}

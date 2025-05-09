@@ -5,6 +5,7 @@ import { requestUrl } from "obsidian";
 import { ExternalRegistry } from './src/etl/extSources.ts';
 import { Person, Product, Project } from './src/RecordNotes.ts';
 import { selectPersonsDlg } from './src/ui-dialogs/selectPersons.ts'
+import { ProgressModal } from './src/ui-dialogs/ProgressModal'
 
 export default class BirPlugin extends Plugin {
 	settings: BirSettings;
@@ -24,8 +25,6 @@ export default class BirPlugin extends Plugin {
 		// This creates an icon in the left ribbon.
 		if (this.settings.ribbonButton) {
 			const ribbonIconEl = this.addRibbonIcon('library', 'Сведения о компаниях', (evt: MouseEvent) => {
-				// Called when the user clicks the icon.
-				// this.findCreateCompany();
 				const cmdListDlg = new ButtonModal(this.app, this);
 				cmdListDlg.open();
 			});
@@ -86,16 +85,10 @@ export default class BirPlugin extends Plugin {
 
 	/** Opens a dialog to search for a company in external sources and create a note */
 	async findCreateCompany() {
-		// !!!!!!!!!!!!!!!!
-		// const a = new ExternalRegistry(this.app, this.manifest, this.settings);
-		// // const compData = await a.getHQforTaxID('2607018122');
-		// // console.log("returned",  compData );
-		// // console.log("returned2", await a.getHQforTaxID('2607018122'));
-		// console.log("Persons", await a.getLinkedPersonsForTaxID('2607018122'));
-		// return;
-		// !!!!!!!!!!!!!!!!
 		new CompanyFindModal(this.app, (result) => {
+			const progress = new ProgressModal(this.app, 'Поиск..');
 			const res = this.etlObj.searchCompany(result)
+			progress.close();
 			res.then((found) => {
 				//only companies, not linked persons
 				const foundCompanies = found.filter( (item)=> 0 == item.objectType );
@@ -117,11 +110,37 @@ export default class BirPlugin extends Plugin {
 		const selectionTxt = this.getCurrentSelection(editor);
 		if ( 2 > selectionTxt.length ) {new Notice("Выделите хотя бы три символа для начала поиска!"); return;}
 
+		const progress = new ProgressModal(this.app, 'Поиск..');
 		const res = this.etlObj.searchCompany(selectionTxt)
+		progress.close();
 		res.then((found) => {
 			this.companySelect(found);
 		})
 	}
+
+	/** Gets company in active opened note and search branches in external registry */
+	async findBranchesForActiveComp(view:MarkdownView|undefined): Promise<bool> {
+		const activeView = view || this.app.workspace.getActiveViewOfType(MarkdownView);
+		const activeTFile = activeView ? activeView.file : null;
+		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
+		const activeRecordType = meta?.frontmatter?.record_type;
+		const taxID = meta?.frontmatter?.taxID;
+		const isValidView: bool = activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
+		if (!isValidView) {
+			new Notice("Команда доступна только если в активной вкладке открыта заметка о компании c taxID и record_type='company_HQ'");
+			return false;
+		}
+
+		const progress = new ProgressModal(this.app, 'Поиск..');
+		const candidates = await this.etlObj.getBranchesForTaxID(taxID);
+		progress.close();
+		console.log("candidates", candidates);
+		if (!candidates.length) {
+			new Notice("Не найдены в доступных реестрах филиалы организации");
+			return false;
+		}
+	}
+
 
 	/** Gets company in active opened note and search linked persons in external registry */
 	async findLinkedPersonsForActiveComp(view:MarkdownView|undefined): Promise<bool>{
@@ -136,9 +155,11 @@ export default class BirPlugin extends Plugin {
 			return false;
 		}
 
+		const progress = new ProgressModal(this.app, 'Поиск..');
 		const candidates = await this.etlObj.getLinkedPersonsForTaxID(taxID);
+		progress.close();
 		if (!candidates.length) {
-			new Notice("Не найдены в реестрах связанные с компанией лица");
+			new Notice("Не найдены в доступных реестрах связанные с компанией лица");
 			return false;
 		}
 		const dlg = new selectPersonsDlg(this.app, candidates);
@@ -233,9 +254,9 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 			{name: 'Добавить персону', disabled:false, callback: plg.addPersonManually.bind(plg)},
 			{name: 'Добавить продукт', desc: 'Добавить продукт, которым владеет компания', disabled:false, callback: plg.addProductManually.bind(plg)},
 			{name: 'Добавить проект', desc: 'Добавить заметку о проекте для последующего самостоятельного заполнения', disabled:false, callback: plg.addProjectManually.bind(plg)},
-			{name: 'Найти связанные структуры к открытой организации', desc: 'Найти и добавить связанные структуры для организации, открытой сейчас в активной вкладке',
+			{name: 'Найти филиалы/обособленные подразделения к открытой организации', desc: 'Найти и добавить филиалы и обособленные подразделениыя для организации, открытой сейчас в активной вкладке',
 				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
-				callback: null
+				callback: plg.findBranchesForActiveComp.bind(plg)
 			},
 			{name: 'Найти связанные персоны к открытой организации', desc: 'Найти и добавить связанные персоны для организации, открытой сейчас в активной вкладке',
 				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,

@@ -205,16 +205,12 @@ export class ETL_BIR extends AbstractETL {
 		});
 	}
 
-	async getlinkedPersonsViaTaxID(taxID: string): Array {
+	async getlinkedPersonsViaTaxID(taxID: string): Promise<Array> {
 		try {
 			const birServices = await this.getBIRconfig();
 			const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&subjectType=0&take=20&term=' + taxID;
 			let searchRes = await requestUrl({url: searchURL, cmethod: 'GET'}).json;
 			const companies = searchRes.filter((item) => (item.objectType == 0 && stripHTMLTags(item.inn) == taxID) );
-			// if (companies.length > 1) {
-			// 	new Notice("Найдено в реестре более чем одна компания с таким ИНН.\nНевозможно продолжить операцию!", 6000);
-			// 	return [];
-			// }
 			if (!companies.length)
 				return [];
 			const companyIDs = companies.map((i) => i.id);
@@ -247,6 +243,28 @@ export class ETL_BIR extends AbstractETL {
 			console.error("Error getting BIR config params. Stopping", error);
 			return [];
 		}
+	}
+
+	async getBranchesForTaxID(taxID: string): Promise<Array> {
+		try {
+			const birServices = await this.getBIRconfig();
+			const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&subjectType=0&take=20&term=' + taxID;
+			let searchRes = await requestUrl({url: searchURL, cmethod: 'GET'}).json;
+			const companies = searchRes.filter((item) => (item.objectType == 0 && stripHTMLTags(item.inn) == taxID) );
+			if (!companies.length || companies.length === 1)
+				return [];
+			const companiesData = await Promise.all( companies.map( async (i) => await this.getCompanyDataByID(i.id)) );
+			if (!companiesData.filter((i) => !this.isCompanyBranch(i)).length)
+				return [];
+			const parentData = companiesData.filter((i) => !this.isCompanyBranch(i))[0];
+			const candidates = companiesData.filter((i) => this.isCompanyBranch(i)).map((i) => {i['Вышестоящая организация'] = parentData['Наименование']; return i;});
+
+			return candidates;
+		} catch (error) {
+			console.error("Error getting BIR config params. Stopping", error);
+			return [];
+		}
+
 	}
 }
 

@@ -97,6 +97,10 @@ export class AbstractETL {
 	}
 
 	// Override this
-	async getlinkedPersonsViaTaxID(taxID: string): Array {
+	async getlinkedPersonsViaTaxID(taxID: string): Promise<Array> {
+	}
+
+	// Override this
+	async getBranchesForTaxID(taxID: string): Promise<Array> {
 	}
 }
