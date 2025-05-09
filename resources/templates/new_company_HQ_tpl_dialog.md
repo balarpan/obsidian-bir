@@ -25,7 +25,6 @@ created_on:  <% tp.date.now("YYYY-MM-DD") %>
 <% (country ? 'country: "' + country + '"': 'country:') %>
 companyName: '<% pname %>'
 taxID:
-Industry:
 parentCompany:
 record_type: company_HQ
 ---

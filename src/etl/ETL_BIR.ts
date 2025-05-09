@@ -35,6 +35,8 @@ export class ETL_BIR extends AbstractETL {
 				item.shortName = div.textContent || div.innerText || "";
 				div.innerHTML = item.fullName;
 				item.fullName = div.textContent || div.innerText || "";
+				div.innerHTML = item.suspendDate;
+				item.suspendDate = div.textContent || div.innerText || "";
 				return item;
 			})
 			this.searchCache.set(srchValue, found);

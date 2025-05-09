@@ -319,6 +319,7 @@ const shortNameEscaped = shortName.replaceAll('"','\\\"');
 const fullNameTitle = "${compData['Полное наименование'].replaceAll('"','\\\"')}";
 const companyAddress = "${compData['Адрес'] ? compData['Адрес'].replaceAll('"','\\\"') : ''}";
 const companyStatus = "${compData['Статус'] ? compData['Статус'].replaceAll('"','\\\"') : ''}";
+const parentCompany = "${compData['Вышестоящая организация'] ? compData['Вышестоящая организация'].replaceAll('"','\\\"') : ''}";
 const tagsString =  country ? "Company/" + country + "/" + pnameCln  : "Company/" + pnameCln;
 const taxID = "${compData['ИНН'] ? compData['ИНН'] : ''}"`;
 		ret += "\n-%>";

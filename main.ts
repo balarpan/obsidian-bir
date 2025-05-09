@@ -4,7 +4,7 @@ import { requestUrl } from "obsidian";
 // import { BIR, birGetByID } from './src/bir-tools.ts';
 import { ExternalRegistry } from './src/etl/extSources.ts';
 import { Person, Product, Project } from './src/RecordNotes.ts';
-import { selectPersonsDlg } from './src/ui-dialogs/selectPersons.ts'
+import { SelectPersonsDlg, SelectBranchesDlg } from './src/ui-dialogs/MultiSelectDlg.ts'
 import { ProgressModal } from './src/ui-dialogs/ProgressModal'
 
 export default class BirPlugin extends Plugin {
@@ -134,11 +134,20 @@ export default class BirPlugin extends Plugin {
 		const progress = new ProgressModal(this.app, 'Поиск..');
 		const candidates = await this.etlObj.getBranchesForTaxID(taxID);
 		progress.close();
-		console.log("candidates", candidates);
 		if (!candidates.length) {
 			new Notice("Не найдены в доступных реестрах филиалы организации");
 			return false;
 		}
+		const dlg = new SelectBranchesDlg(this.app, candidates);
+		dlg.open( async (sel) => {
+			console.log("selected: ", sel);
+			// const persObj = new Person(this.app, this);
+			// for(const pers of sel) {
+			// 	await persObj.AddByProperties(pers);
+			// }
+		});
+		return true;
+
 	}
 
 
@@ -162,7 +171,7 @@ export default class BirPlugin extends Plugin {
 			new Notice("Не найдены в доступных реестрах связанные с компанией лица");
 			return false;
 		}
-		const dlg = new selectPersonsDlg(this.app, candidates);
+		const dlg = new SelectPersonsDlg(this.app, candidates);
 		dlg.open( async (sel) => {
 			const persObj = new Person(this.app, this);
 			for(const pers of sel) {
@@ -355,7 +364,7 @@ export class BirQuickSelect extends FuzzySuggestModal<BirQuickSearch> {
 		// el.appendChild(div);
 		// div = createDiv({ text: "ИНН: " + item.item.inn });
 		// el.appendChild(div);
-		el.innerHTML += `<p class="bir_quicksrch_iteminfo"><small>ИНН: ${item.item.inn}&nbsp;&nbsp;ОГРН: ${item.item.ogrn}</small></p>`;
+		el.innerHTML += `<p class="bir_quicksrch_iteminfo"><small>ИНН: ${item.item.inn}&nbsp;&nbsp;ОГРН: ${item.item.ogrn}${item.item.suspendDate ? ' <mark>Недействующая c ' + moment(item.item.suspendDate).format('DD.MM.YYYY') +'</mark>' : ''}</small></p>`;
 		el.innerHTML += (item.item.address && item.item.address.length) ? `<p class="bir_quicksrch_iteminfo_address"><small>${item.item.address}</small></p>` : '';
 	}
 
