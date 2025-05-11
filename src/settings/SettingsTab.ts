@@ -5,12 +5,13 @@ interface BirSettings {
 	personsFolder: string,
 	productsFolder: string,
 	projectsFolder: string,
-	openAfterCreation: bool,
+	openAfterCreation: boolean,
+	openAfterCreationNewTab: boolean,
 	extServiceName: string,
-	useCredentials: bool,
+	useCredentials: boolean,
 	authUser: string,
 	authPass: string,
-	ribbonButton: bool,
+	ribbonButton: boolean,
 	formOfPropertyRegexp: void,
 	formOfPropertyRegexpStr: string
 
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: BirSettings = {
 	productsFolder: '/Products',
 	projectsFolder: '/Projects',
 	openAfterCreation: true,
+	openAfterCreationNewTab: false,
 	extServiceName: 'БИР Аналитик',
 	useCredentials: false,
 	authUser: '',
@@ -41,7 +43,7 @@ export class BirSettingsTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	isTemplaterEnabled(): bool {return this.app?.plugins?.enabledPlugins?.has("templater-obsidian");}
+	isTemplaterEnabled(): boolean {return this.app?.plugins?.enabledPlugins?.has("templater-obsidian");}
 	display(): void {
 		const {containerEl} = this;
 
@@ -100,10 +102,24 @@ export class BirSettingsTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.openAfterCreation)
 				.onChange(async value => {
 						this.plugin.settings.openAfterCreation = value
-						await this.plugin.saveSettings()
+						await this.plugin.saveSettings();
+						this.display();
 					}
 				)
 			)
+		if (this.plugin.settings.openAfterCreation) {
+			new Setting(containerEl)
+				.setName('Открывать в новой вкладке')
+				.setDesc("Открыть созданную заметку в новой вкладке или в активной.")
+				.addToggle(component => component
+					.setValue(this.plugin.settings.openAfterCreationNewTab)
+					.onChange(async value => {
+							this.plugin.settings.openAfterCreationNewTab = value
+							await this.plugin.saveSettings();
+						}
+					)
+				)
+		}
 		new Setting(containerEl)
 			.setName('Метод подключения')
 			.addDropdown(dropdown => {
@@ -113,7 +129,7 @@ export class BirSettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.useCredentials ? 'auth' : 'guest')
 					.onChange(async value => {
 							this.plugin.settings.useCredentials = (value == 'auth');
-							await this.plugin.saveSettings()
+							await this.plugin.saveSettings();
 							this.display(); // force refresh
 						})
 				}

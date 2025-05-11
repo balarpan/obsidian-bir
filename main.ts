@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./src/settings/Set
 import { requestUrl } from "obsidian";
 // import { BIR, birGetByID } from './src/bir-tools.ts';
 import { ExternalRegistry } from './src/etl/extSources.ts';
-import { Person, Product, Project } from './src/RecordNotes.ts';
+import { CompanyRecord, PersonRecord, ProductRecord, ProjectRecord } from './src/RecordNotes.ts';
 import { SelectPersonsDlg, SelectBranchesDlg } from './src/ui-dialogs/MultiSelectDlg.ts'
 import { ProgressModal } from './src/ui-dialogs/ProgressModal'
 
@@ -140,11 +140,10 @@ export default class BirPlugin extends Plugin {
 		}
 		const dlg = new SelectBranchesDlg(this.app, candidates);
 		dlg.open( async (sel) => {
-			console.log("selected: ", sel);
-			// const persObj = new Person(this.app, this);
-			// for(const pers of sel) {
-			// 	await persObj.AddByProperties(pers);
-			// }
+			const compObj = new CompanyRecord(this.app, this.manifest, this.settings);
+			for(const comp of sel) {
+				await compObj.AddByProperties(comp, activeTFile.parent.path);
+			}
 		});
 		return true;
 
@@ -173,7 +172,7 @@ export default class BirPlugin extends Plugin {
 		}
 		const dlg = new SelectPersonsDlg(this.app, candidates);
 		dlg.open( async (sel) => {
-			const persObj = new Person(this.app, this);
+			const persObj = new PersonRecord(this.app, this.manifest, this.settings);
 			for(const pers of sel) {
 				await persObj.AddByProperties(pers);
 			}
@@ -182,17 +181,17 @@ export default class BirPlugin extends Plugin {
 	}
 
 	async addPersonManually() {
-		const pers = new Person(this.app, this);
+		const pers = new PersonRecord(this.app, this.manifest, this.settings);
 		await pers.addManually();
 	}
 
 	async addProductManually() {
-		const prod = new Product(this.app, this);
+		const prod = new ProductRecord(this.app, this.manifest, this.settings);
 		await prod.addManually();
 	}
 
 	async addProjectManually() {
-		const proj = new Project(this.app, this);
+		const proj = new ProjectRecord(this.app, this.manifest, this.settings);
 		await proj.addManually();
 	}
 

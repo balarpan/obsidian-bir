@@ -36,7 +36,7 @@ class AbstractMultiselectDlg<T> extends SuggestModal<T> {
 	_renderSuggestion(item: T, el: HTMLElement) {}
 
 	// Override this
-	_getSelectedCandidates(cleanInternalProps: bool = false): [] {
+	_getSelectedCandidates(cleanInternalProps: boolean = false): [] {
 	}
 
 	selectSuggestion(item: T, evt: MouseEvent | KeyboardEvent) {
@@ -57,7 +57,7 @@ class AbstractMultiselectDlg<T> extends SuggestModal<T> {
 			this.onSubmit(this.getSelectedCandidates(true));
 	}
 
-	getSelectedCandidates(cleanInternalProps: bool = false): [] {
+	getSelectedCandidates(cleanInternalProps: boolean = false): [] {
 		return this._getSelectedCandidates(cleanInternalProps);
 	}
 	
@@ -88,7 +88,7 @@ export class SelectPersonsDlg extends AbstractMultiselectDlg<personCandidate> {
 		item.htmlEl = cont;
 	}
 
-	_getSelectedCandidates(cleanInternalProps: bool = false): [] {
+	_getSelectedCandidates(cleanInternalProps: boolean = false): [] {
 		const sel = this.candidates.filter( (item) => item.itemSelected);
 		if ( cleanInternalProps ) {
 			const newSel = JSON.parse(JSON.stringify(sel));
@@ -129,7 +129,7 @@ export class SelectBranchesDlg extends AbstractMultiselectDlg<branchCandidate> {
 		item.htmlEl = cont;
 	}
 
-	_getSelectedCandidates(cleanInternalProps: bool = false): [] {
+	_getSelectedCandidates(cleanInternalProps: boolean = false): [] {
 		const sel = this.candidates.filter( (item) => item.itemSelected);
 		if ( cleanInternalProps ) {
 			const newSel = JSON.parse(JSON.stringify(sel));

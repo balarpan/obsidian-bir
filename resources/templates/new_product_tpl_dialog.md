@@ -81,15 +81,21 @@ record_type: productNote
 # Продукт <% pName %>
 
 ## Владелец продукта
+
 <% (cSelected.name ? '[[' + cSelected.filename + '|' + cSelected.name + ']]' : '') %>
 
 ## Краткое описание
+
 ### Общие сведения
+
 ### Компоненты
+
 ### Сфера применения
+
 ### Известные пользователи
 
 ## Упоминание продукта в заметках:
+
 ```dataview
 TABLE WITHOUT ID level1, level2, level3
 FLATTEN flat(list("none", file.inlinks)) as level1

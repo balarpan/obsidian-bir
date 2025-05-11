@@ -91,7 +91,7 @@ export class ETL_BIR extends AbstractETL {
 			let doc = parser.parseFromString(html, 'text/html');
 			let dsec;
 
-			let bir = {};
+			let bir = {'Cтрана': 'Россия'};
 
 			let parseStngs = {
 				'Наименование': "//bir-company-brief//bir-brief-layout//bir-company-header//bir-brief-layout-header//h1",
@@ -237,7 +237,7 @@ export class ETL_BIR extends AbstractETL {
 					positions: Array.from(positions_set),
 					// companyFullName: company.fullName,
 					companyTaxID: taxID,
-					country: 'Россия'
+					country: 'Россия',
 				});
 			}
 			return persons;

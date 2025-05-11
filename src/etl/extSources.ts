@@ -58,7 +58,7 @@ export class ExternalRegistry {
 	/**
 	 * Creates a company note.
 	 *
-	 * @param      {Object}          compData          Dictionary of compnay data
+	 * @param      {Object}          compData          Dictionary of company data
 	 *                                               (from ETL module)
 	 * @param      {string}        insideFolderPath  Note will be created inside
 	 *                                               this folder
@@ -195,11 +195,11 @@ export class ExternalRegistry {
 		return compData['ИНН'] ? this.getBranchesForTaxID(compData['ИНН']) : [];
 	}
 
-	getPathToComapnyTemplateDir(): string {
+	getPathToCompanyTemplateDir(): string {
 		return "/" + this.manifest.dir + "/resources/templates";
 	}
-	getPathToComapnyTemplate(): string {
-		return this.getPathToComapnyTemplateDir() + "/new_company_HQ_tpl.md";
+	getPathToCompanyTemplate(): string {
+		return this.getPathToCompanyTemplateDir() + "/new_company_HQ_tpl.md";
 	}
 	isFileExists(target: string | TFile): bool {
 		const path = (typeof target === "string") ? normalizePath(target) : target.path;
@@ -261,7 +261,7 @@ export class ExternalRegistry {
 			new Notice("Для использования шаблонов необходим установленный и запущенный\n Templater!", 3000);
 			return false;
 		}
-		const templatePath = this.getPathToComapnyTemplate();
+		const templatePath = this.getPathToCompanyTemplate();
 		return this.app.vault.adapter.read(templatePath).then( async (tplContent) => {
 			if (!tplContent.length) {
 				new Notice("Ошибка чтения файла шаблона!", 3000);

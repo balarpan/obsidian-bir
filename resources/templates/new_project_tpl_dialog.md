@@ -72,42 +72,54 @@ new Notice(`Новая запись: ${pName}`, 3000);
 ---
 aliases:
 tags:
-projectName: "<% pName %>"
+projectName: "<% pName.replaceAll('"', '') %>"
 created_on: <% tp.date.now("YYYY-MM-DD") %>
 <% (country ? 'country: "' + country + '"': 'country:') %>
-<% (cSelected.name ? 'projectOwner: "' + cSelected.name + '"': 'projectOwner:') %>
+<% (cSelected.name ? 'projectOwner: "' + cSelected.name.replaceAll('"', '') + '"': 'projectOwner:') %>
 done: false
 record_type: projectNote
 ---
 
 # Проект <% pName %>
+
 статус:: 
+прогресс <progress  max="100" value="0"></progress>
+
 ## Сведения
+
 ### Краткое описание
+
 ### Сроки
+
 начало:: 
 deadline::
 окончание:: 
 
 ### Владельцы проекта
+
 - <% (cSelected.name ? '[[' + cSelected.filename + '|' + cSelected.name + ']]': '') %>
+
 ### Участники
 
 ### Используемые продукты и решения
 
 ## Milestones
+
 - [ ]  
 - [ ]  
 
 ## Задачи и метрики
+
 -  
 -  
 
 ## Ресурсы и идеи
+
 -  
 -  
   
 ---
+
 ## 📝Log
 
 ### <% tp.date.now("YYYY-MM-DD") %> - Начальная запись
@@ -115,7 +127,9 @@ deadline::
 notes_go_here
 
 ---
+
 ## Упоминания в других заметках:
+
 ```dataview
 list from [[#this.file.name]] and !outgoing([[# this.file.name]])
 ```

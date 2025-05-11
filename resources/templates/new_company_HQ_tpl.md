@@ -5,7 +5,7 @@ created_on:  <% tp.date.now("YYYY-MM-DD") %>
 <% (country ? 'country: "' + country + '"': 'country:') %>
 companyName: '<% shortName %>'
 <% taxID ? 'taxID: "' + taxID + '"' : 'taxID' %>
-parentCompany: <% parentCompany ? parentCompany : '' %>
+parentCompany: <% parentCompany ? '"[[' + parentCompany + ']]"' : '' %>
 record_type: <% recordType ? recordType : 'company_HQ' %>
 ---
 
@@ -14,22 +14,28 @@ record_type: <% recordType ? recordType : 'company_HQ' %>
 Официальный сайт: 
 
 ## Краткое описание
-<% fullNameTitle %>
-<% companyAddress %>
-<% companyStatus.startsWith("Действующая") ?  companyStatus : '=='+companyStatus+'=='  %>
 
-## Центральный аппарат
+<% fullNameTitle ? fullNameTitle + '\n' : '' %>
+<% companyAddress ? companyAddress + '\n' : '' %>
+<% companyStatus.startsWith("Действующая") ?  companyStatus +'n': '==' + companyStatus + '==\n'  %>
+<% parentCompany ? 'Вышестоящая организация: [[' +  parentCompany + ']]\n' : '' %>
 
 ## 📇Подчинённые компании
+
 ```dataviewjs
-dv.table(["Компания", "страна"], dv.pages('"Companies"').where(p => dv.func.contains(p.parentCompany,dv.current().file.link))
-.sort(p => p.CompanyFullName).map(p => { return [ dv.func.link(p.file.link,p.CompanyFullName), p.country] } )
-)
+const notes = dv.pages('"Companies"').where(p => dv.func.contains(p.parentCompany,dv.current().file.link))
+.sort(p => p.CompanyFullName).map(p => { return [ dv.func.link(p.file.link,p.CompanyFullName), p.country] } );
+
+if
+  (notes.length) dv.table(["Компания", "страна"], notes);
+else
+  dv.paragraph("Не найдены");
 ```
 
 ## 💼Офисы и сотрудники
 
 ### Региональные офисы
+
 ```dataview
 TABLE office_country as "Страна"
 from #<% tagsString %> 
@@ -47,12 +53,15 @@ sort Страна, ФИО
 
 
 ## Продукты, сервисы и проекты
+
 ### Продукты и сервисы
+
 ```dataview
 LIST WITHOUT ID link(file.name, productName) FROM "Products"
 WHERE owner="<% shortName.replaceAll('"','\\\"') %>" and record_type="productNote"
 ```
 ### Проекты
+
 ```dataview
 TABLE WITHOUT ID link(file.name, projectName) as Проект, статус, начало, окончание FROM "Projects"
 WHERE record_type="projectNote" and projectOwner="<% shortName.replaceAll('"','\\\"') %>"
@@ -61,6 +70,7 @@ WHERE record_type="projectNote" and projectOwner="<% shortName.replaceAll('"','\
 ## Ключевые клиенты
 
 ## Упоминания в других заметках:
+
 ```dataview
 TABLE WITHOUT ID level1, level2, level3
 FLATTEN flat(list("none", file.inlinks)) as level1
@@ -74,4 +84,5 @@ LIMIT 50
 ## 📝Log
 
 ### <% tp.date.now("YYYY-MM-DD") %> - Начальная запись
+
 notes_go_here
