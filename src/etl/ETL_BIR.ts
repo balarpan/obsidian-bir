@@ -259,7 +259,7 @@ export class ETL_BIR extends AbstractETL {
 			if (!companiesData.filter((i) => !this.isCompanyBranch(i)).length)
 				return [];
 			const parentData = companiesData.filter((i) => !this.isCompanyBranch(i))[0];
-			const candidates = companiesData.filter((i) => this.isCompanyBranch(i)).map((i) => {i['Вышестоящая организация'] = parentData['Наименование']; return i;});
+			const candidates = companiesData.filter((i) => this.isCompanyBranch(i)).map((i) => {i.parentCompany = parentData; return i;});
 
 			return candidates;
 		} catch (error) {

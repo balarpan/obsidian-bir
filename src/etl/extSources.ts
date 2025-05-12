@@ -281,7 +281,9 @@ export class ExternalRegistry {
 					okved += compData['ОКВЭД']['Дополнительные'] ? "\n> [!info]- Дополнительный\n" + okvedPrint(compData['ОКВЭД']['Дополнительные']) + "\n" : '';
 				}
 				const dopCodesKeys = ['ОКАТО', 'ОКТМО', 'ОКФС', 'ОКОГУ', 'ОКОПФ'].filter( (k)=> compData.hasOwnProperty(k));
-				const notallowed = Array.prototype.concat.call( ['ОКВЭД', 'ИНН', 'ОГРН', 'ОКПО', 'Статус_bool', 'Благонадежность', 'Кредитоспособность'], dopCodesKeys);
+				const notallowed = Array.prototype.concat.call(
+					['ОКВЭД', 'ИНН', 'ОГРН', 'ОКПО', 'Статус_bool', 'Благонадежность', 'Кредитоспособность', 'parentCompany'],
+					dopCodesKeys);
 				let data2 = Object(compData);
 				data2 = Object.keys(compData)
 				.filter(key => !notallowed.includes(key))

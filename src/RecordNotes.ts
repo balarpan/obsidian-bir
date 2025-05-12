@@ -6,6 +6,7 @@ import { AbstractRecordNote } from './AbstractRecordNote.ts';
 export class CompanyRecord extends AbstractRecordNote {
 	readonly tempalteDialogFName = "new_company_HQ_tpl_dialog.md";
 	readonly templateNewNoteFName = "new_company_HQ_tpl.md";
+	readonly templateNewBranchFName = "new_company_branch_tpl.md";
 	readonly propsDefault = {fullName: null, shortName: null, inn: null, country: null, Наименование: null}
 	readonly propsRequired_list = ['fullName', 'Наименование'];
 
@@ -46,6 +47,9 @@ export class CompanyRecord extends AbstractRecordNote {
 	getPathToCompanyTemplate(): string {
 		return this.getPathTemplateDir() + "/" + this.templateNewNoteFName;
 	}
+	getPathToCompanyBrnachTemplate(): string {
+		return this.getPathTemplateDir() + "/" + this.templateNewBranchFName;
+	}
 
 	/** Note: Company without 'ОКОПФ' record is treated as HQ (not a branch, etc.) */
 	private isCompanyBranch(compData: Object): boolean {
@@ -58,7 +62,7 @@ export class CompanyRecord extends AbstractRecordNote {
 			new Notice("Для использования шаблонов необходим установленный и запущенный\n Templater!", 3000);
 			return false;
 		}
-		const templatePath = this.getPathToCompanyTemplate();
+		const templatePath = this.isCompanyBranch(compData) ? this.getPathToCompanyBrnachTemplate() : this.getPathToCompanyTemplate();
 		return this.app.vault.adapter.read(templatePath).then( async (tplContent) => {
 			if (!tplContent.length) {
 				new Notice("Ошибка чтения файла шаблона!", 3000);
@@ -78,7 +82,9 @@ export class CompanyRecord extends AbstractRecordNote {
 					okved += compData['ОКВЭД']['Дополнительные'] ? "\n> [!info]- Дополнительный\n" + okvedPrint(compData['ОКВЭД']['Дополнительные']) + "\n" : '';
 				}
 				const dopCodesKeys = ['ОКАТО', 'ОКТМО', 'ОКФС', 'ОКОГУ', 'ОКОПФ'].filter( (k)=> compData.hasOwnProperty(k));
-				const notallowed = Array.prototype.concat.call( ['ОКВЭД', 'ИНН', 'ОГРН', 'ОКПО', 'Статус_bool', 'Благонадежность', 'Кредитоспособность'], dopCodesKeys);
+				const notallowed = Array.prototype.concat.call(
+					['ОКВЭД', 'ИНН', 'ОГРН', 'ОКПО', 'Статус_bool', 'Благонадежность', 'Кредитоспособность', 'parentCompany'],
+					dopCodesKeys);
 				let data2 = Object(compData);
 				data2 = Object.keys(compData)
 				.filter(key => !notallowed.includes(key))
@@ -101,13 +107,12 @@ export class CompanyRecord extends AbstractRecordNote {
 
 	private getCompanyTplHeader(compData: dict): string {
 		const name = this.companyNameFirst(compData['Наименование']).replaceAll('"', '');
-		const parentCompanyName = compData['Вышестоящая организация']?.length ? this.companyNameFirst(compData['Вышестоящая организация']).replaceAll('"', '') : '';
+		const parentCompanyName = compData.parentCompany ? this.companyNameFirst(compData.parentCompany['Наименование']).replaceAll('"', '') : '';
 		const okopf_sub = ['30001', '30002', '30003', '30004'];
 		const isBranch = this.isCompanyBranch(compData);
 		const recordType = isBranch ? 'companyOffice' : 'company_HQ';
 		const country = compData['Cтрана'] ? compData['Cтрана'] : '';
-		const tagStrPrefix = country ? "Company/" + country + "/" : "Company/";
-		console.log("isBranch", isBranch);
+		const tagStrPrefix = isBranch && parentCompanyName ? "Company/" + compData.parentCompany['Cтрана'] + "/" : (country ? "Company/" + country + "/" : "Company/");
 		const tagStr = isBranch && parentCompanyName ? (tagStrPrefix + sanitizeName(parentCompanyName) + "/" + sanitizeName(name)) : (tagStrPrefix + sanitizeName(name))
 		// const name = compData['Наименование'].replace(/^(АО |ООО |ПАО )/g, '').replaceAll('"', '');
 		let ret: string = `<%*

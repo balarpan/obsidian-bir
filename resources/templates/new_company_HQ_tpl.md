@@ -15,10 +15,9 @@ record_type: <% recordType ? recordType : 'company_HQ' %>
 
 ## Краткое описание
 
-<% fullNameTitle ? fullNameTitle + '\n' : '' %>
-<% companyAddress ? companyAddress + '\n' : '' %>
-<% companyStatus.startsWith("Действующая") ?  companyStatus +'n': '==' + companyStatus + '==\n'  %>
-<% parentCompany ? 'Вышестоящая организация: [[' +  parentCompany + ']]\n' : '' %>
+<% fullNameTitle ? fullNameTitle + '\n' : '' %><% companyAddress ? companyAddress + '\n' : '' %><%
+ companyStatus.startsWith("Действующая") ?  companyStatus +'\n': '==' + companyStatus + '==\n'  %><%
+  parentCompany ? 'Вышестоящая организация: [[' +  parentCompany + ']]\n' : '' %>
 
 ## 📇Подчинённые компании
 

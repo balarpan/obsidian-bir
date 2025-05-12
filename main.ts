@@ -32,9 +32,16 @@ export default class BirPlugin extends Plugin {
 			// ribbonIconEl.addClass('my-plugin-ribbon-class');
 		}
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+		// const statusBarItemEl = this.addStatusBarItem();
+		// statusBarItemEl.setText('Status Bar Text');
+		const isNoteHQ = () => {
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			const activeTFile = activeView ? activeView.file : null;
+			const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
+			const activeRecordType = meta?.frontmatter?.record_type;
+			const taxID = meta?.frontmatter?.taxID;
+			return activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
+		}
 
 		this.addCommand({
 			id: 'BIR-find-add-company',
@@ -60,6 +67,30 @@ export default class BirPlugin extends Plugin {
 			id: 'BIR-add-project-dialog',
 			name: 'Добавить проект',
 			callback: async () => { this.addProjectManually();},
+		});
+		this.addCommand({
+			id: 'BIR-add-linked-branches',
+			name: 'Найти филиалы/обособленные подразделения к открытой организации',
+			checkCallback: (checking: boolean) => {
+				if (isNoteHQ()) {
+					if (!checking)
+						this.findBranchesForActiveComp();
+					return true;
+				}
+				return false;
+			},
+		});
+		this.addCommand({
+			id: 'BIR-add-linked-persons',
+			name: 'Найти связанные с компанией персоны',
+			checkCallback: (checking: boolean) => {
+				if (isNoteHQ()) {
+					if (!checking)
+						this.findLinkedPersonsForActiveComp();
+					return true;
+				}
+				return false;
+			},
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
@@ -105,8 +136,8 @@ export default class BirPlugin extends Plugin {
 
 	/** use user selected text to find company */
 	async findCreateCompanyBySelection(editor:(Editor|undefined),view:MarkdownView|undefined) {
-		if( ! view ) view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if( (! editor) && view ) editor = view.editor;
+		if( !view ) view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if( (!editor) && view ) editor = view.editor;
 		const selectionTxt = this.getCurrentSelection(editor);
 		if ( 2 > selectionTxt.length ) {new Notice("Выделите хотя бы три символа для начала поиска!"); return;}
 
@@ -125,7 +156,7 @@ export default class BirPlugin extends Plugin {
 		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
 		const activeRecordType = meta?.frontmatter?.record_type;
 		const taxID = meta?.frontmatter?.taxID;
-		const isValidView: bool = activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
+		const isValidView: boolean = activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
 		if (!isValidView) {
 			new Notice("Команда доступна только если в активной вкладке открыта заметка о компании c taxID и record_type='company_HQ'");
 			return false;
@@ -157,7 +188,7 @@ export default class BirPlugin extends Plugin {
 		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
 		const activeRecordType = meta?.frontmatter?.record_type;
 		const taxID = meta?.frontmatter?.taxID;
-		const isValidView: bool = activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
+		const isValidView: boolean= activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
 		if (!isValidView) {
 			new Notice("Команда доступна только если в активной вкладке открыта заметка о компании taxID и record_type='company_HQ'");
 			return false;
@@ -262,7 +293,7 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 			{name: 'Добавить персону', disabled:false, callback: plg.addPersonManually.bind(plg)},
 			{name: 'Добавить продукт', desc: 'Добавить продукт, которым владеет компания', disabled:false, callback: plg.addProductManually.bind(plg)},
 			{name: 'Добавить проект', desc: 'Добавить заметку о проекте для последующего самостоятельного заполнения', disabled:false, callback: plg.addProjectManually.bind(plg)},
-			{name: 'Найти филиалы/обособленные подразделения к открытой организации', desc: 'Найти и добавить филиалы и обособленные подразделениыя для организации, открытой сейчас в активной вкладке',
+			{name: 'Найти филиалы/обособленные подразделения к открытой организации', desc: 'Найти и добавить филиалы и обособленные подразделения для организации, открытой сейчас в активной вкладке',
 				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
 				callback: plg.findBranchesForActiveComp.bind(plg)
 			},
