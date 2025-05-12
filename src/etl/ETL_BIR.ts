@@ -16,16 +16,24 @@ export class ETL_BIR extends AbstractETL {
 
 	async getBIRconfig(): Promise<Dict> {
 		return new Promise((resolve, reject) => {
-			this.BIRconfigService.then((resp) => {resolve(resp.json);}).catch((err) => {reject(err);});
+			this.BIRconfigService.then((resp) => {
+				resolve(resp.json);
+			}).catch((err) => {
+				new Notice("Error fetching config for BIR Service. Further work will be difficult or impossible.", 7000);
+				console.log("Error fetching config for BIR Service. Further work will be difficult or impossible.");
+				reject(err);
+			});
 		});
 	}
 
 	private async _searchCompany(searchTxt: string): Promise<Array<Object>> {
 		const srchValue = searchTxt;
-		const birServices = await this.getBIRconfig();
-		const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&take=20&term=';
-
 		try {
+			const birServices = await this.getBIRconfig();
+			if (!birServices || !birServices.searchApiUrl2)
+				throw new Error("BIR Service URL is Invalid!");
+			const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&take=20&term=';
+
 			const res = await fetch(searchURL + encodeURIComponent(srchValue));
 			let found = await res.json();
 			//clean HTML tags from full and short names
@@ -43,8 +51,8 @@ export class ETL_BIR extends AbstractETL {
 			return found;
 
 		} catch (err) {
-			new Notice("Ошибка поиска компании...");
-			console.log(err.message);
+			new Notice("Ошибка поиска компании...\n" + err.message, 5000);
+			console.log('Error searching company. Error is: ', err.message);
 			return [];
 		}
 	}
