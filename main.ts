@@ -51,7 +51,15 @@ export default class BirPlugin extends Plugin {
 		this.addCommand({
 			id: 'BIR-selection-find-add-company',
 			name: 'Найти и добавить компанию из выделенного текста',
-			callback: () => {this.findCreateCompanyBySelection();},
+			editorCheckCallback: (checking: boolean, editor: Editor, view: MarkdownView) => {
+				const sel = editor.getSelection();
+				if (2 < sel.length) {
+				  if (!checking)
+				    this.findCreateCompanyBySelection(editor,view);
+				  return true
+				}
+				return false;
+		},
 		});
 		this.addCommand({
 			id: 'BIR-add-person-dialog',

@@ -26,13 +26,18 @@ export class ETL_BIR extends AbstractETL {
 		});
 	}
 
+	async getBIRSearchURL(): Promise<string> | Promise<undefined> {
+		const birServices = await this.getBIRconfig();
+		return (birServices && birServices?.searchApiUrl?.length) ? birServices.searchApiUrl : undefined;
+	}
+
 	private async _searchCompany(searchTxt: string): Promise<Array<Object>> {
 		const srchValue = searchTxt;
 		try {
-			const birServices = await this.getBIRconfig();
-			if (!birServices || !birServices.searchApiUrl2)
+			const searchApiUrl = await this.getBIRSearchURL();
+			if (!searchApiUrl)
 				throw new Error("BIR Service URL is Invalid!");
-			const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&take=20&term=';
+			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&take=20&term=';
 
 			const res = await fetch(searchURL + encodeURIComponent(srchValue));
 			let found = await res.json();
@@ -217,8 +222,10 @@ export class ETL_BIR extends AbstractETL {
 
 	async getlinkedPersonsViaTaxID(taxID: string): Promise<Array> {
 		try {
-			const birServices = await this.getBIRconfig();
-			const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&subjectType=0&take=20&term=' + taxID;
+			const searchApiUrl = await this.getBIRSearchURL();
+			if (!searchApiUrl)
+				throw new Error("BIR Service URL is Invalid!");
+			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&subjectType=0&take=20&term=' + taxID;
 			let searchRes = await requestUrl({url: searchURL, cmethod: 'GET'}).json;
 			const companies = searchRes.filter((item) => (item.objectType == 0 && stripHTMLTags(item.inn) == taxID) );
 			if (!companies.length)
@@ -229,7 +236,7 @@ export class ETL_BIR extends AbstractETL {
 				);
 
 			searchRes = await requestUrl({
-				url: birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&subjectType=1&take=20&term=' + taxID,
+				url: searchApiUrl + '/v2/FullSearch?skip=0&subjectType=1&take=20&term=' + taxID,
 				cmethod: 'GET'
 			}).json;
 			const candidates = searchRes.filter(
@@ -257,8 +264,10 @@ export class ETL_BIR extends AbstractETL {
 
 	async getBranchesForTaxID(taxID: string): Promise<Array> {
 		try {
-			const birServices = await this.getBIRconfig();
-			const searchURL = birServices.searchApiUrl2 + '/v2/FullSearch?skip=0&subjectType=0&take=20&term=' + taxID;
+			const searchApiUrl = await this.getBIRSearchURL();
+			if (!searchApiUrl)
+				throw new Error("BIR Service URL is Invalid!");
+			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&subjectType=0&take=20&term=' + taxID;
 			let searchRes = await requestUrl({url: searchURL, cmethod: 'GET'}).json;
 			const companies = searchRes.filter((item) => (item.objectType == 0 && stripHTMLTags(item.inn) == taxID) );
 			if (!companies.length || companies.length === 1)
