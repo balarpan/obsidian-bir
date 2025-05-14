@@ -26,6 +26,7 @@ export default class BirPlugin extends Plugin {
 		const nlg = new EGRULNalogRuETL(this.app, this.settings);
 		const res = await nlg.mainSearchRequest('7727272169');
 		console.log( "returned ", res );
+		nlg.downloadEGRULbyID(res[0].id);
 
 
 		// This creates an icon in the left ribbon.

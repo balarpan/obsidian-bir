@@ -21,7 +21,7 @@ export class EGRULNalogRuETL extends AbstractETL {
 	}
 
 
-	async mainSearchRequest(srchTxt: string): Promise {
+	async mainSearchRequest(srchTxt: string): Promise<Array> {
 		await Promise.all( [this.mainCookiePromise] );
 
 		const params1 = {
@@ -36,19 +36,18 @@ export class EGRULNalogRuETL extends AbstractETL {
 		}
 		try {
 			const res1 = await requestUrl(params1).json;	
-			console.log("res1", res1);
 
 			const tm = new Date().getTime();
 			const params2 = {
-				url:this.mainURL + 'search-result/'+res1.t+'?r='+time+'&_='+time,
+				url:this.mainURL+'search-result/'+res1.t+'?r='+tm+'&_='+tm,
 				method: 'GET',
 				headers: {
 					'Cookie': this.mainCookie + '; uniI18nLang=RUS',
 					'Accept': 'application/json, text/javascript, */*; q=0.01'
 				},
 			}
-			const res2 = await requestUrl(params2).json;	
-			console.log("res2", res2);
+			const res2 = await requestUrl(params2).json;
+			return res2.rows.map( (i) => this.mapSearchToStandardKeys(i));
 		} catch (err) {
 			console.log("Error happens when fetching egrul. ", err);
 			console.log(JSON.stringify(err));
@@ -56,7 +55,32 @@ export class EGRULNalogRuETL extends AbstractETL {
 		}
 	}
 
+	async downloadEGRULbyID(id: string) {
+		const res1 = await requestUrl({url: this.mainURL + 'vyp-download/' + encodeURIComponent(id)});
+		console.log("pdf res", res1);
+	}
 
+	private mapSearchToStandardKeys(inp: Object): Object {
+		const i = JSON.parse(JSON.stringify(inp));
+		const z = {
+			c: 'Сокращенное наименование',
+			n: 'Полное наименование',
+			g: 'Руководитель',
+			i: 'ИНН', o: 'ОГРН',
+			// p: 'КПП',
+			// r: 'Дата присвоения ОГРН',
+			rn: 'Регион',
+			t: 'id'
+		}
+		let r = {}
+		for (const [key1, key2] of Object.entries(z)) {
+			if (i.hasOwnProperty(key1))
+				r[key2] = i[key1];
+		}
+		r['Статус'] = i.hasOwnProperty('e') ?  'Прекратила деятельность ' + i.e : 'Действующая на ' + moment().format('DD.MM.YYYY');
+		r['Статус_bool'] = !(i.e && i.e?.length);
+		return r;
+	}
 
 	// Override this
 	private async _getCompanyDataByID(birID: string): Promise<Object> {
