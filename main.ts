@@ -25,8 +25,8 @@ export default class BirPlugin extends Plugin {
 		this.etlObj = new ExternalRegistry(this.app, this.manifest, this.settings);
 		const nlg = new EGRULNalogRuETL(this.app, this.settings);
 		const res = await nlg.mainSearchRequest('7727272169');
-		console.log( "returned ", res );
-		nlg.downloadEGRULbyID(res[0].id);
+		const res2 = await nlg.downloadEGRULbyID(res[0].id);
+		console.log( "returned ", res2 );
 
 
 		// This creates an icon in the left ribbon.

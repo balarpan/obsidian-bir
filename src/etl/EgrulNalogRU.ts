@@ -5,7 +5,7 @@ import { AbstractETL } from "./AbstractETL";
 export class EGRULNalogRuETL extends AbstractETL {
 	readonly mainURL = 'https://egrul.nalog.ru/';
 	private mainCookiePromise: Promise<string>;
-	private mainCookie: Array;
+	private mainCookie: string;
 
 	constructor(app: App, settings: BirSettings) {
 		super(app, settings);
@@ -14,21 +14,22 @@ export class EGRULNalogRuETL extends AbstractETL {
 	}
 
 	async getMyCookie(): Promise<string> {
+		if (this.mainCookie)
+			return this.mainCookie;
 		return await requestUrl({url:this.mainURL + 'index.html', method: "GET"}).then((response) => {
 			const cook = response.headers['set-cookie'][0].split(';')[0].split('=');
 			return `${cook[0]}=${cook[1]}`;
 		});
 	}
 
-
 	async mainSearchRequest(srchTxt: string): Promise<Array> {
-		await Promise.all( [this.mainCookiePromise] );
+		const cookie = await this.getMyCookie();
 
 		const params1 = {
 			url:this.mainURL,
 			method: 'POST',
 			headers: {
-				'Cookie': this.mainCookie + '; uniI18nLang=RUS',
+				'Cookie': cookie + '; uniI18nLang=RUS',
 				'Accept': 'application/json, text/javascript, */*; q=0.01'
 			},
 			contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -42,7 +43,7 @@ export class EGRULNalogRuETL extends AbstractETL {
 				url:this.mainURL+'search-result/'+res1.t+'?r='+tm+'&_='+tm,
 				method: 'GET',
 				headers: {
-					'Cookie': this.mainCookie + '; uniI18nLang=RUS',
+					'Cookie': cookie + '; uniI18nLang=RUS',
 					'Accept': 'application/json, text/javascript, */*; q=0.01'
 				},
 			}
@@ -55,9 +56,26 @@ export class EGRULNalogRuETL extends AbstractETL {
 		}
 	}
 
-	async downloadEGRULbyID(id: string) {
-		const res1 = await requestUrl({url: this.mainURL + 'vyp-download/' + encodeURIComponent(id)});
-		console.log("pdf res", res1);
+	async downloadEGRULbyID(id: string): Promise<ArrayBuffer> | Promise<undefined> {
+		const cookie = await this.getMyCookie();
+		
+		const url1 = this.mainURL + 'vyp-request/' + encodeURIComponent(id);
+		try {
+			const res1 = await requestUrl({url: url1, method: 'GET', headers: {'Cookie': cookie + '; uniI18nLang=RUS'}}).json;
+			if (!res1?.t)
+				return;
+			const url2 = this.mainURL + 'vyp-download/' + encodeURIComponent(res1.t);
+			const res2 = await requestUrl({url: url2, method: 'GET', headers: {'Cookie': cookie + '; uniI18nLang=RUS'}});
+			console.log("pdf res2", res2);
+			if ('application/pdf' == res2.headers['content-type']) {
+				return res2.arrayBuffer;
+			}
+			return;
+		} catch (err) {
+			console.log("Error happens when downloading egrul PDF. for id " + id, err);
+			console.log(JSON.stringify(err));
+			new Notice("Error fetching PDF from egrul.nalog.ru");
+		}
 	}
 
 	private mapSearchToStandardKeys(inp: Object): Object {
