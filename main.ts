@@ -7,6 +7,8 @@ import { CompanyRecord, PersonRecord, ProductRecord, ProjectRecord } from './src
 import { SelectPersonsDlg, SelectBranchesDlg } from './src/ui-dialogs/MultiSelectDlg.ts'
 import { ProgressModal } from './src/ui-dialogs/ProgressModal'
 
+import { EGRULNalogRuETL } from './src/etl/EgrulNalogRU.ts';
+
 export default class BirPlugin extends Plugin {
 	settings: BirSettings;
 	private etlObj: BIR;
@@ -21,6 +23,8 @@ export default class BirPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.etlObj = new ExternalRegistry(this.app, this.manifest, this.settings);
+		const nlg = new EGRULNalogRuETL(this.app, this.settings);
+		console.log( await nlg.mainSearchRequest('ГАЗПРОМ'));
 
 		// This creates an icon in the left ribbon.
 		if (this.settings.ribbonButton) {
