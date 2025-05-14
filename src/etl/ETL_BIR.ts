@@ -11,7 +11,7 @@ export class ETL_BIR extends AbstractETL {
 
 	constructor(app: App, settings: BirSettings) {
 		super(app, settings);
-		this.BIRconfigService = requestUrl({url: this.BIRconfigURL,cmethod: "GET"});
+		this.BIRconfigService = requestUrl({url: this.BIRconfigURL,method: "GET"});
 	}
 
 	async getBIRconfig(): Promise<Dict> {
@@ -96,7 +96,7 @@ export class ETL_BIR extends AbstractETL {
 		// We use Obsidian function requestUrl to overcome CORS problem.
 		// See https://forum.obsidian.md/t/make-http-requests-from-plugins/15461/12
 		//
-		return requestUrl({url: url,cmethod: "GET"}).then(function (response) {
+		return requestUrl({url: url, method: "GET"}).then(function (response) {
 			return response.text;
 		}).then(function (html: string) {
 			// Convert the HTML string into a document object
@@ -226,8 +226,8 @@ export class ETL_BIR extends AbstractETL {
 			if (!searchApiUrl)
 				throw new Error("BIR Service URL is Invalid!");
 			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&subjectType=0&take=20&term=' + taxID;
-			let searchRes = await requestUrl({url: searchURL, cmethod: 'GET'}).json;
-			const companies = searchRes.filter((item) => (item.objectType == 0 && stripHTMLTags(item.inn) == taxID) );
+			let searchRes = await requestUrl({url: searchURL, method: 'GET'}).json;
+			const companies = searchRes.filter((item) => ("Company" == item.objectType && stripHTMLTags(item.inn) == taxID) );
 			if (!companies.length)
 				return [];
 			const companyIDs = companies.map((i) => i.id);
@@ -237,10 +237,10 @@ export class ETL_BIR extends AbstractETL {
 
 			searchRes = await requestUrl({
 				url: searchApiUrl + '/v2/FullSearch?skip=0&subjectType=1&take=20&term=' + taxID,
-				cmethod: 'GET'
+				method: 'GET'
 			}).json;
 			const candidates = searchRes.filter(
-				(item) => (item.objectType == 1 && item?.linkedPositions && candidateFilter(item?.linkedPositions))
+				(item) => ("Person" == item.objectType && item?.linkedPositions && candidateFilter(item?.linkedPositions))
 				);
 			let persons = [];
 			for (let pers of candidates) {
@@ -268,8 +268,8 @@ export class ETL_BIR extends AbstractETL {
 			if (!searchApiUrl)
 				throw new Error("BIR Service URL is Invalid!");
 			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&subjectType=0&take=20&term=' + taxID;
-			let searchRes = await requestUrl({url: searchURL, cmethod: 'GET'}).json;
-			const companies = searchRes.filter((item) => (item.objectType == 0 && stripHTMLTags(item.inn) == taxID) );
+			let searchRes = await requestUrl({url: searchURL, method: 'GET'}).json;
+			const companies = searchRes.filter((item) => ("Company" == item.objectType && stripHTMLTags(item.inn) == taxID) );
 			if (!companies.length || companies.length === 1)
 				return [];
 			const companiesData = await Promise.all( companies.map( async (i) => await this.getCompanyDataByID(i.id)) );

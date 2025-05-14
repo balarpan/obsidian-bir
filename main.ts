@@ -24,7 +24,9 @@ export default class BirPlugin extends Plugin {
 		await this.loadSettings();
 		this.etlObj = new ExternalRegistry(this.app, this.manifest, this.settings);
 		const nlg = new EGRULNalogRuETL(this.app, this.settings);
-		console.log( await nlg.mainSearchRequest('ГАЗПРОМ'));
+		const res = await nlg.mainSearchRequest('7727272169');
+		console.log( "returned ", res );
+
 
 		// This creates an icon in the left ribbon.
 		if (this.settings.ribbonButton) {
@@ -130,11 +132,11 @@ export default class BirPlugin extends Plugin {
 	async findCreateCompany() {
 		new CompanyFindModal(this.app, (result) => {
 			const progress = new ProgressModal(this.app, 'Поиск..');
-			const res = this.etlObj.searchCompany(result)
-			progress.close();
+			const res = this.etlObj.searchCompany(result);
 			res.then((found) => {
+				progress.close();
 				//only companies, not linked persons
-				const foundCompanies = found.filter( (item)=> 0 == item.objectType );
+				const foundCompanies = found.filter( (item)=> "Company" == item.objectType );
 				this.companySelect(foundCompanies);
 			})
 		}).open();
