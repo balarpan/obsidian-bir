@@ -2,7 +2,7 @@ import { App, Editor, MarkdownView, Modal, SuggestModal, FuzzySuggestModal, Noti
 import { DEFAULT_SETTINGS, BirSettings, BirSettingsTab} from "./src/settings/SettingsTab"
 import { requestUrl } from "obsidian";
 // import { BIR, birGetByID } from './src/bir-tools.ts';
-import { ExternalRegistry } from './src/etl/extSources.ts';
+import { ExternalRegistry, sanitizeName } from './src/etl/extSources.ts';
 import { CompanyRecord, PersonRecord, ProductRecord, ProjectRecord } from './src/RecordNotes.ts';
 import { SelectPersonsDlg, SelectBranchesDlg } from './src/ui-dialogs/MultiSelectDlg.ts'
 import { ProgressModal } from './src/ui-dialogs/ProgressModal'
@@ -23,11 +23,6 @@ export default class BirPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.etlObj = new ExternalRegistry(this.app, this.manifest, this.settings);
-		const nlg = new EGRULNalogRuETL(this.app, this.settings);
-		const res = await nlg.mainSearchRequest('7727272169');
-		const res2 = await nlg.downloadEGRULbyID(res[0].id);
-		console.log( "returned ", res2 );
-
 
 		// This creates an icon in the left ribbon.
 		if (this.settings.ribbonButton) {
@@ -107,6 +102,18 @@ export default class BirPlugin extends Plugin {
 				return false;
 			},
 		});
+		this.addCommand({
+			id: 'BIR-add-EGRUL-excerpt',
+			name: 'Получить выписку ЕГРЮЛ',
+			checkCallback: (checking: boolean) => {
+				if (isNoteHQ()) {
+					if (!checking)
+						this.downloadEGRULexcerpt();
+					return true;
+				}
+				return false;
+			},
+		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new BirSettingsTab(this.app, this));
@@ -164,8 +171,7 @@ export default class BirPlugin extends Plugin {
 		})
 	}
 
-	/** Gets company in active opened note and search branches in external registry */
-	async findBranchesForActiveComp(view:MarkdownView|undefined): Promise<bool> {
+  getActiveNoteProp(view:MarkdownView|undefined): Object | undefined {
 		const activeView = view || this.app.workspace.getActiveViewOfType(MarkdownView);
 		const activeTFile = activeView ? activeView.file : null;
 		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
@@ -174,8 +180,16 @@ export default class BirPlugin extends Plugin {
 		const isValidView: boolean = activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
 		if (!isValidView) {
 			new Notice("Команда доступна только если в активной вкладке открыта заметка о компании c taxID и record_type='company_HQ'");
-			return false;
+			return;
 		}
+		return {taxid: taxID, file: activeTFile, metadata: meta, view: activeView}
+  }
+
+	/** Gets company in active opened note and search branches in external registry */
+	async findBranchesForActiveComp(view:MarkdownView|undefined): Promise<bool> {
+		const {taxid: taxID, file: activeTFile} = this.getActiveNoteProp(view);
+		if (!taxID || !activeTFile)
+			return false;
 
 		const progress = new ProgressModal(this.app, 'Поиск..');
 		const candidates = await this.etlObj.getBranchesForTaxID(taxID);
@@ -195,19 +209,11 @@ export default class BirPlugin extends Plugin {
 
 	}
 
-
 	/** Gets company in active opened note and search linked persons in external registry */
 	async findLinkedPersonsForActiveComp(view:MarkdownView|undefined): Promise<bool>{
-		const activeView = view || this.app.workspace.getActiveViewOfType(MarkdownView);
-		const activeTFile = activeView ? activeView.file : null;
-		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
-		const activeRecordType = meta?.frontmatter?.record_type;
-		const taxID = meta?.frontmatter?.taxID;
-		const isValidView: boolean= activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
-		if (!isValidView) {
-			new Notice("Команда доступна только если в активной вкладке открыта заметка о компании taxID и record_type='company_HQ'");
+		const {taxid: taxID, file: activeTFile} = this.getActiveNoteProp(view);
+		if (!taxID || !activeTFile)
 			return false;
-		}
 
 		const progress = new ProgressModal(this.app, 'Поиск..');
 		const candidates = await this.etlObj.getLinkedPersonsForTaxID(taxID);
@@ -223,6 +229,45 @@ export default class BirPlugin extends Plugin {
 				await persObj.AddByProperties(pers);
 			}
 		});
+		return true;
+	}
+
+	async downloadEGRULexcerpt(view1:MarkdownView|undefined): Promise<bool>{
+		const noteMeta = this.getActiveNoteProp(view1);
+		if (!noteMeta)
+			return false;
+		const {taxid: taxID, file: activeTFile, metadata: meta, view: view} = noteMeta;
+		if (!taxID || !activeTFile)
+			return false;
+
+		const progress = new ProgressModal(this.app, 'Получение выписки ЕГРЮЛ..');
+		const pdfBytes = await this.etlObj.downloadEGRULexcerptByTaxID(taxID);
+		progress.close();
+		if (!pdfBytes) {
+			new Notice("Ошибка получения выписки ЕГРЮЛ.");
+			return false;
+		}
+		const pdfDir = activeTFile.parent.path + '/docs/' + moment().format('YYYY')
+		const pdfName = 'Выписка ЕГРЮЛ ' + sanitizeName(meta?.frontmatter?.companyName) + ' от ' + moment().format('YYYY-MM-DD') + '.pdf';
+		const pdfPath = pdfDir + '/' + pdfName;
+		await this.etlObj.createFolder(pdfDir);
+		try {
+			const pdfTFile = await this.app.vault.createBinary(pdfPath, pdfBytes);			
+		} catch (err) {
+			new Notice("Невозможно создать файл " + pdfPath);
+			console.log("Error writing " + pdfPath, "Error is: ", err);
+			return false;
+		}
+		const origContent = await this.app.vault.read(activeTFile);
+		const appendStr = `\n[[${pdfPath}|Выписка ЕГРЮЛ от ${moment().format('DD.MM.YYYY')}]]`;
+		await this.app.vault.modify(activeTFile, origContent + appendStr);
+		
+		//OPen in active view
+		const active_leaf = this.app.workspace.getLeaf(false);
+		if (active_leaf) {
+			await active_leaf.openFile(this.app.vault.getAbstractFileByPath(pdfPath), {state: { mode: "source" }, });
+		}
+
 		return true;
 	}
 
@@ -315,6 +360,10 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 			{name: 'Найти связанные персоны к открытой организации', desc: 'Найти и добавить связанные персоны для организации, открытой сейчас в активной вкладке',
 				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
 				callback: plg.findLinkedPersonsForActiveComp.bind(plg)
+			},
+			{name: 'Получить выписку ЕГРЮЛ', desc: 'Скачать выписку ЕГРЮЛ на текущую дату.',
+				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
+				callback: plg.downloadEGRULexcerpt.bind(plg)
 			},
 		];
 		return cmds.filter( (item)=> !item.disabled );

@@ -1,8 +1,9 @@
 import { App, Notice, TFile, TFolder} from 'obsidian';
 import { requestUrl } from "obsidian";
-import { AbstractETL } from "./AbstractETL";
+import { AbstractETL, FIFO_TTL } from "./AbstractETL";
 
 export class EGRULNalogRuETL extends AbstractETL {
+	private cachePDF: FIFO_TTL<string, ArrayBuffer>;
 	readonly mainURL = 'https://egrul.nalog.ru/';
 	private mainCookiePromise: Promise<string>;
 	private mainCookie: string;
@@ -11,6 +12,8 @@ export class EGRULNalogRuETL extends AbstractETL {
 		super(app, settings);
 		this.mainCookiePromise = this.getMyCookie();
 		this.mainCookiePromise.then( (resp) => {this.mainCookie = resp;} );
+		// FIFO queue for 20 records and TTL = 4 hours
+		this.cachePDF = new FIFO_TTL<string, ArrayBuffer>(20, 1000 * 60 * 60 * 4 );
 	}
 
 	async getMyCookie(): Promise<string> {
@@ -56,7 +59,17 @@ export class EGRULNalogRuETL extends AbstractETL {
 		}
 	}
 
+	async downloadEGRULbyTaxID(taxID: string): Promise<ArrayBuffer> | Promise<undefined> {
+		let entity;
+		if ( 10 !== taxID.length || !(entity = await this.mainSearchRequest(taxID)) || 1 !== entity.length || !entity[0].id)
+			return Promise.resolve(undefined);
+		return this.downloadEGRULbyID(entity[0].id);
+	}
+
 	async downloadEGRULbyID(id: string): Promise<ArrayBuffer> | Promise<undefined> {
+		const cached = this.cachePDF.get(id);
+		if (cached)
+			return Promise.resolve(cached);
 		const cookie = await this.getMyCookie();
 		
 		const url1 = this.mainURL + 'vyp-request/' + encodeURIComponent(id);
@@ -66,8 +79,8 @@ export class EGRULNalogRuETL extends AbstractETL {
 				return;
 			const url2 = this.mainURL + 'vyp-download/' + encodeURIComponent(res1.t);
 			const res2 = await requestUrl({url: url2, method: 'GET', headers: {'Cookie': cookie + '; uniI18nLang=RUS'}});
-			console.log("pdf res2", res2);
 			if ('application/pdf' == res2.headers['content-type']) {
+				this.cachePDF.set(id, res2.arrayBuffer);
 				return res2.arrayBuffer;
 			}
 			return;

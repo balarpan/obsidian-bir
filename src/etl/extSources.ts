@@ -2,12 +2,14 @@ import { App, Notice, PluginManifest, TFile, TFolder, normalizePath } from 'obsi
 import { BirSettings } from "./src/settings/SettingsTab"
 import { requestUrl } from "obsidian";
 import { ETL_BIR } from './ETL_BIR';
+import { EGRULNalogRuETL } from './EgrulNalogRU';
 
 export class ExternalRegistry {
 	private app: App;
 	private manifest: PluginManifest;
 	private settings: BirSettings;
 	private etl: Object;
+	private egrul: EGRULNalogRuETL;
 	constructor(app: App, manifest: PluginManifest, settings: BirSettings) {
 		this.app = app;
 		this.manifest = JSON.parse(JSON.stringify(manifest)); // deep copy for safety reasons
@@ -16,7 +18,10 @@ export class ExternalRegistry {
 		// if ('BIR' === settings.extServiceName)
 		// 	this.etl = new ETL_BIR(this.app, this.manifest, this.settings);
 		this.etl = new ETL_BIR(this.app, this.settings);
-
+		if ('EGRUL' === settings.extServiceName)
+			this.egrul = this.obj;
+		else
+			this.egrul = new EGRULNalogRuETL(this.app, this.settings);
 	}
 
 	/**
@@ -143,6 +148,10 @@ export class ExternalRegistry {
 				compData[key] = pMatch[2];
 		}
 		return compData;
+	}
+
+	async downloadEGRULexcerptByTaxID(taxID: string): Promise<ArrayBuffer> | Promise<undefined> {
+		return this.egrul.downloadEGRULbyTaxID(taxID);
 	}
 
 	/** Note: Company without 'ОКОПФ' record is treated as HQ (not a branch, etc.) */
@@ -331,7 +340,7 @@ const taxID = "${compData['ИНН'] ? compData['ИНН'] : ''}"`;
 }
 
 /** prevent * " \ / < > : | ? in file name */
-function sanitizeName(t) {
+export function sanitizeName(t) {
 	return t.replaceAll(" ","_")
 		.replace(/[&\/\\#,+()$~%.'":*?<>{}]/gi,'_')
 		.replace(/^_+/g, '')
