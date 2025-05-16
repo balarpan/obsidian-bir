@@ -20,6 +20,9 @@ export default class BirPlugin extends Plugin {
 	}
 
 	get plugin_is_enabled() { return this.app?.plugins?.enabledPlugins?.has(this.manifest.id); }
+	async onExternalSettingsChange() {
+		await this.loadSettings();
+	}
 	async onload() {
 		await this.loadSettings();
 		this.etlObj = new ExternalRegistry(this.app, this.manifest, this.settings);
@@ -291,8 +294,10 @@ export default class BirPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const loaded = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded);
 		this.settings.formOfPropertyRegexp = new RegExp(this.settings.formOfPropertyRegexpStr);
+		this.settings.plugin_version = this.manifest.version; // TODO: in case of upgrade overwrite new and sensitive props
 	}
 
 	async saveSettings() {
@@ -327,12 +332,13 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 
 	getSuggestions(query: string): ButtonModalCmd[] {
 		return this.commands.filter((cmd) =>
-			cmd.name.includes(query.toLowerCase())
+			cmd.name.toLowerCase().includes(query.toLowerCase())
 		);
 	}
 
 	renderSuggestion(cmd: string, el: HTMLElement) {
-		el.createEl('div', { text: cmd.name });
+		if( cmd.group ) el.createEl('div', {text: cmd.group, cls: 'bir_mainbtn_groupinfo'});
+		el.createEl('div', { text: cmd.name, cls: 'bir_mainbtn_item' });
 		if ( cmd.desc && cmd.desc.trim().length ) el.createEl('small', { text: cmd.desc.trim(), cls: 'bir_mainbtn_iteminfo' });
 	}
 
@@ -348,22 +354,24 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
 		const activeRecordType = meta?.frontmatter?.record_type;
 		const taxID = meta?.frontmatter?.taxID;
+		const isNoteHQ = activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType);
 		const cmds = [
-			{name: 'Найти и добавить компанию', desc: 'Поиск организации и создание заполненной заметки', disabled:false, callback: plg.findCreateCompany.bind(plg)},
+			{name: 'Найти и добавить компанию', desc: 'Поиск организации и создание заполненной заметки', group:'Организация', disabled:false, callback: plg.findCreateCompany.bind(plg)},
 			{name: 'Найти компанию согласно выделенному тексту и добавить', desc: 'Поиск организации на основе выделенного пользователем текста', disabled: plg.getCurrentSelection().length ? false : true, callback: plg.findCreateCompanyBySelection.bind(plg)},
-			{name: 'Добавить персону', disabled:false, callback: plg.addPersonManually.bind(plg)},
+			{name: 'Добавить персону', group:'Другие заметки', disabled:false, desc: 'Добавить персону вручную', callback: plg.addPersonManually.bind(plg)},
 			{name: 'Добавить продукт', desc: 'Добавить продукт, которым владеет компания', disabled:false, callback: plg.addProductManually.bind(plg)},
 			{name: 'Добавить проект', desc: 'Добавить заметку о проекте для последующего самостоятельного заполнения', disabled:false, callback: plg.addProjectManually.bind(plg)},
-			{name: 'Найти филиалы/обособленные подразделения к открытой организации', desc: 'Найти и добавить филиалы и обособленные подразделения для организации, открытой сейчас в активной вкладке',
-				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
+			{name: 'Найти филиалы/обособленные подразделения к открытой организации', desc: 'Найти и добавить филиалы и обособленные подразделения для организации из активной вкладки',
+				group:'Открытая заметка об организации',
+				disabled: !isNoteHQ,
 				callback: plg.findBranchesForActiveComp.bind(plg)
 			},
-			{name: 'Найти связанные персоны к открытой организации', desc: 'Найти и добавить связанные персоны для организации, открытой сейчас в активной вкладке',
-				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
+			{name: 'Найти связанные персоны к открытой организации', desc: 'Найти и добавить связанные персоны для организации из активной вкладки',
+				disabled: !isNoteHQ,
 				callback: plg.findLinkedPersonsForActiveComp.bind(plg)
 			},
 			{name: 'Получить выписку ЕГРЮЛ', desc: 'Скачать выписку ЕГРЮЛ на текущую дату.',
-				disabled: (activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType)) ? false : true,
+				disabled: !isNoteHQ,
 				callback: plg.downloadEGRULexcerpt.bind(plg)
 			},
 		];

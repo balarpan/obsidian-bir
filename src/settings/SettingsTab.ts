@@ -30,7 +30,7 @@ export const DEFAULT_SETTINGS: BirSettings = {
 	authPass: '',
 	ribbonButton: false,
 	formOfPropertyRegexp: null,
-	formOfPropertyRegexpStr: '^(АО|ООО|ПАО)\\s+(.+)$'
+	formOfPropertyRegexpStr: '^(АО|ООО|ЗАО|ПАО|ФГУП)\\s+(.+)$'
 }
 
 export class BirSettingsTab extends PluginSettingTab {

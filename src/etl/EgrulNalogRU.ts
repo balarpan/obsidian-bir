@@ -26,7 +26,7 @@ export class EGRULNalogRuETL extends AbstractETL {
 				this.mainCookie = undefined;
 			else
 				return Promise.resolve(this.mainCookie);
-		return await requestUrl({url:this.mainURL + 'index.html', method: "GET"}).then((response) => {
+		return requestUrl({url:this.mainURL + 'index.html', method: "GET"}).then((response) => {
 			const cook = response.headers['set-cookie'][0].split(';')[0].split('=');
 			const val = `${cook[0]}=${cook[1]}`;
 			this.mainCookie = val; this.mainCookieExpires = Date.now() + this.mainCookieTTL;
@@ -99,9 +99,9 @@ export class EGRULNalogRuETL extends AbstractETL {
 			}
 			return;
 		} catch (err) {
-			console.log("Error happens when downloading egrul PDF. for id " + id, err);
+			console.log("Error happens when downloading egrul PDF.", err);
 			console.log(JSON.stringify(err));
-			new Notice("Error fetching PDF from egrul.nalog.ru");
+			new Notice("Ошибка при получении PDF с egrul.nalog.ru\nПопробуйте повторить попытку позже.");
 		}
 	}
 

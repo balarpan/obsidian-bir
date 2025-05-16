@@ -1,8 +1,16 @@
+.bir_mainbtn_item {
+  padding-left: 1.5em;
+}
 .bir_mainbtn_iteminfo {
+   display:block; padding-left: 1.7em;
   color: var(--text-muted);
   line-height: var(--line-height-tight);
 }
-
+.bir_mainbtn_groupinfo {
+  padding-left: 0.1em;
+  color: var(--text-warning);
+/*  line-height: var(--line-height-tight);*/
+}
 
 .bir_quicksrch_item {
 /*	border: 1px solid var(--background-modifier-border);	*/
