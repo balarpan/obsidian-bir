@@ -337,7 +337,28 @@ const taxID = "${compData['ИНН'] ? compData['ИНН'] : ''}"`;
 		return ret;
 	}
 
+	putEgrulLinkInNoteMD(noteMD: string, pathToPDF: string | TFile): string {
+		const path = (pathToPDF instanceof TFile) ? pathToPDF.path : pathToPDF;
+		const blockRX = /^\> \[!info\](?:-)\s+Выписки ЕГРЮЛ\s*$/gim;
+		const blockPos = noteMD.search(blockRX);
+		console.log("blockPos", blockPos);
+		const injectPos = -1 === blockPos ? noteMD.length : blockPos + (noteMD.match(blockRX).pop()).length;
+		const linkTxt = `[[${path}|Выписка ЕГРЮЛ от ${moment().format('DD.MM.YYYY')}]]`
+		const injectStr = -1 === blockPos ? `\n\n> [!info]- Выписки ЕГРЮЛ\n> - ${linkTxt}\n` : `\n> - ${linkTxt}`;
+		console.log(blockPos, injectPos, injectStr);
+
+		if (-1 === blockPos)
+			return noteMD + injectStr;
+		else
+			return noteMD.slice(0, injectPos) + injectStr + noteMD.slice(injectPos);
+		
+		
+
+
+	}
+
 }
+
 
 /** prevent * " \ / < > : | ? in file name */
 export function sanitizeName(t) {

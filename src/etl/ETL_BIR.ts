@@ -65,7 +65,7 @@ export class ETL_BIR extends AbstractETL {
 	async getHQforTaxID(taxID: string): Promise<Object> {
 		let candidates;
 		try {
-			candidates = (await this.searchCompany(taxID)).filter((i) => i.objectType === 0 && stripHTMLTags(i.inn) === taxID);
+			candidates = (await this.searchCompany(taxID)).filter((i) => i.objectType === "Company" && stripHTMLTags(i.inn) === taxID);
 		} catch (err) {
 			console.log("Error during searching company HQ", err);
 			return {};

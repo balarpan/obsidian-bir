@@ -4,28 +4,40 @@ import { AbstractETL, FIFO_TTL } from "./AbstractETL";
 
 export class EGRULNalogRuETL extends AbstractETL {
 	private cachePDF: FIFO_TTL<string, ArrayBuffer>;
+	private cacheSearch: FIFO_TTL<string, Array>;
 	readonly mainURL = 'https://egrul.nalog.ru/';
 	private mainCookiePromise: Promise<string>;
 	private mainCookie: string;
+	private mainCookieExpires: number;
+	private readonly mainCookieTTL: number = 1000 * 60 * 60 * 1; // 1 hour
 
 	constructor(app: App, settings: BirSettings) {
 		super(app, settings);
 		this.mainCookiePromise = this.getMyCookie();
-		this.mainCookiePromise.then( (resp) => {this.mainCookie = resp;} );
+		this.mainCookiePromise.then( (resp) => {this.mainCookie = resp; this.mainCookieExpires = Date.now() + this.mainCookieTTL; } );
 		// FIFO queue for 20 records and TTL = 4 hours
 		this.cachePDF = new FIFO_TTL<string, ArrayBuffer>(20, 1000 * 60 * 60 * 4 );
+		this.cacheSearch = new FIFO_TTL<string, ArrayBuffer>(20, 1000 * 60 * 60 * 4 );
 	}
 
 	async getMyCookie(): Promise<string> {
 		if (this.mainCookie)
-			return this.mainCookie;
+			if (Date.now() >= this.mainCookieExpires )
+				this.mainCookie = undefined;
+			else
+				return Promise.resolve(this.mainCookie);
 		return await requestUrl({url:this.mainURL + 'index.html', method: "GET"}).then((response) => {
 			const cook = response.headers['set-cookie'][0].split(';')[0].split('=');
-			return `${cook[0]}=${cook[1]}`;
+			const val = `${cook[0]}=${cook[1]}`;
+			this.mainCookie = val; this.mainCookieExpires = Date.now() + this.mainCookieTTL;
+			return val;
 		});
 	}
 
 	async mainSearchRequest(srchTxt: string): Promise<Array> {
+		const cached = this.cacheSearch.get(srchTxt);
+		if (cached)
+			return Promise.resolve(cached);
 		const cookie = await this.getMyCookie();
 
 		const params1 = {
@@ -43,7 +55,7 @@ export class EGRULNalogRuETL extends AbstractETL {
 
 			const tm = new Date().getTime();
 			const params2 = {
-				url:this.mainURL+'search-result/'+res1.t+'?r='+tm+'&_='+tm,
+				url: this.mainURL + 'search-result/' + res1.t + '?r=' + tm + '&_=' + tm,
 				method: 'GET',
 				headers: {
 					'Cookie': cookie + '; uniI18nLang=RUS',
@@ -51,7 +63,9 @@ export class EGRULNalogRuETL extends AbstractETL {
 				},
 			}
 			const res2 = await requestUrl(params2).json;
-			return res2.rows.map( (i) => this.mapSearchToStandardKeys(i));
+			const ret = res2.rows.map( (i) => this.mapSearchToStandardKeys(i));
+			this.cacheSearch.set(srchTxt, ret);
+			return ret;
 		} catch (err) {
 			console.log("Error happens when fetching egrul. ", err);
 			console.log(JSON.stringify(err));

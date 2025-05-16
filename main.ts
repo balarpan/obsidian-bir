@@ -259,8 +259,9 @@ export default class BirPlugin extends Plugin {
 			return false;
 		}
 		const origContent = await this.app.vault.read(activeTFile);
-		const appendStr = `\n[[${pdfPath}|Выписка ЕГРЮЛ от ${moment().format('DD.MM.YYYY')}]]`;
-		await this.app.vault.modify(activeTFile, origContent + appendStr);
+		// const appendStr = `\n[[${pdfPath}|Выписка ЕГРЮЛ от ${moment().format('DD.MM.YYYY')}]]`;
+		const modified = this.etlObj.putEgrulLinkInNoteMD(origContent, activeTFile);
+		await this.app.vault.modify(activeTFile, modified);
 		
 		//OPen in active view
 		const active_leaf = this.app.workspace.getLeaf(false);
