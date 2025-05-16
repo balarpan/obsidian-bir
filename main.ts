@@ -260,7 +260,7 @@ export default class BirPlugin extends Plugin {
 		}
 		const origContent = await this.app.vault.read(activeTFile);
 		// const appendStr = `\n[[${pdfPath}|Выписка ЕГРЮЛ от ${moment().format('DD.MM.YYYY')}]]`;
-		const modified = this.etlObj.putEgrulLinkInNoteMD(origContent, activeTFile);
+		const modified = this.etlObj.putEgrulLinkInNoteMD(origContent, pdfPath);
 		await this.app.vault.modify(activeTFile, modified);
 		
 		//OPen in active view
