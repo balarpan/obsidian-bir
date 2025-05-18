@@ -7,7 +7,7 @@ export class EGRULNalogRuETL extends AbstractETL {
 	private cacheSearch: FIFO_TTL<string, Array>;
 	readonly mainURL = 'https://egrul.nalog.ru/';
 	private mainCookiePromise: Promise<string>;
-	private mainCookie: string;
+	private mainCookie: string | undefined = undefined;
 	private mainCookieExpires: number;
 	private readonly mainCookieTTL: number = 1000 * 60 * 60 * 1; // 1 hour
 
@@ -25,12 +25,12 @@ export class EGRULNalogRuETL extends AbstractETL {
 			if (Date.now() >= this.mainCookieExpires )
 				this.mainCookie = undefined;
 			else
-				return Promise.resolve(this.mainCookie);
-		return requestUrl({url:this.mainURL + 'index.html', method: "GET"}).then((response) => {
+				return this.mainCookie;
+		return await requestUrl({url:this.mainURL + 'index.html', method: "GET"}).then((response) => {
 			const cook = response.headers['set-cookie'][0].split(';')[0].split('=');
 			const val = `${cook[0]}=${cook[1]}`;
 			this.mainCookie = val; this.mainCookieExpires = Date.now() + this.mainCookieTTL;
-			return val;
+			return val;	
 		});
 	}
 
@@ -62,6 +62,8 @@ export class EGRULNalogRuETL extends AbstractETL {
 					'Accept': 'application/json, text/javascript, */*; q=0.01'
 				},
 			}
+			// mimicking random clicks on site: from 0 to ~1 sec. delay
+			await new Promise(resolve => setTimeout(resolve, 1000 * Math.random() * 1.07));
 			const res2 = await requestUrl(params2).json;
 			const ret = res2.rows.map( (i) => this.mapSearchToStandardKeys(i));
 			this.cacheSearch.set(srchTxt, ret);

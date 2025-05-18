@@ -78,7 +78,7 @@ export class ExternalRegistry {
 			return false;
 		}
 		await this.createFolder(folderPath + "/docs/" + moment().format("YYYY"));
-		await this.createFolder(folderPath + "/_media");
+		// await this.createFolder(folderPath + "/_media");
 		const notePath = normalizePath(folderPath + "/" + sanitizeName(cname + "_HQ") + ".md");
 		// const file = app.vault.getAbstractFileByPath(notePath);
 		const noteTFile = await app.vault.create(notePath, "");

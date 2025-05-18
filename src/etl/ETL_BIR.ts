@@ -42,7 +42,7 @@ export class ETL_BIR extends AbstractETL {
 			const res = await fetch(searchURL + encodeURIComponent(srchValue));
 			let found = await res.json();
 			//clean HTML tags from full and short names
-			found = found.map( item => {
+			found = found.filter(  i => i?.inn && i?.shortName ).map( item => {
 				var div = document.createElement("div");
 				div.innerHTML = item.shortName;
 				item.shortName = div.textContent || div.innerText || "";

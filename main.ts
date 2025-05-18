@@ -41,7 +41,7 @@ export default class BirPlugin extends Plugin {
 		// statusBarItemEl.setText('Status Bar Text');
 		const isNoteHQ = () => {
 			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-			const activeTFile = activeView ? activeView.file : null;
+			const activeTFile = this.app.workspace.getActiveFile();
 			const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
 			const activeRecordType = meta?.frontmatter?.record_type;
 			const taxID = meta?.frontmatter?.taxID;
@@ -350,7 +350,7 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 	getCommands(): string[] {
 		const plg = this.myPlugin;
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		const activeTFile = activeView ? activeView.file : null;
+		const activeTFile = this.app.workspace.getActiveFile();
 		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
 		const activeRecordType = meta?.frontmatter?.record_type;
 		const taxID = meta?.frontmatter?.taxID;
