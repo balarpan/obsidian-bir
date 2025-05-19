@@ -54,17 +54,19 @@ export class AbstractETL {
 		this.searchCache = new FIFO_TTL<string, Object>(50, 1000 * 60 * 10 );
 	}
 
-	async searchCompany(searchTxt: string): Promise<Array<Object>> {
+	async searchCompany(searchTxt: string): Promise<Array<Object>> | Promise<undefined> {
 		const cached = this.searchCache.get(searchTxt);
 		if (cached)
 			return Promise.resolve(cached);
 		if (!searchTxt.length || 2>searchTxt.length ) {
 			new Notice("Укажите как минимум три символа для поиска организации!", 4000)
-			return [];
+			return undefined;
 		}
 
 		const ret = await this._searchCompany(searchTxt);
-		this.searchCache.set(searchTxt, ret);
+		this.searchCache.delete(searchTxt);
+		if ( ret )
+			this.searchCache.set(searchTxt, ret);
 		return ret;
 	}
 

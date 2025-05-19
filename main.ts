@@ -146,6 +146,8 @@ export default class BirPlugin extends Plugin {
 			const res = this.etlObj.searchCompany(result);
 			res.then((found) => {
 				progress.close();
+				if (!found)
+					return;
 				//only companies, not linked persons
 				const foundCompanies = found.filter( (item)=> "Company" == item.objectType );
 				this.companySelect(foundCompanies);
@@ -383,7 +385,7 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 export class CompanyFindModal extends Modal {
 	constructor(app: App, onSubmit: (result: string) => void) {
 		super(app);
-		this.setTitle('БИР Аналитик. Поиск организации.');
+		this.setTitle('BIF. Поиск организации.');
 
 		let name = '';
 		let runBtn;

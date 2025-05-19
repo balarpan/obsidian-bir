@@ -11,7 +11,7 @@ export class ETL_BIR extends AbstractETL {
 
 	constructor(app: App, settings: BirSettings) {
 		super(app, settings);
-		this.BIRconfigService = requestUrl({url: this.BIRconfigURL,method: "GET"});
+		this.BIRconfigService = requestUrl({url: this.BIRconfigURL, method: "GET"});
 	}
 
 	async getBIRconfig(): Promise<Dict> {
@@ -31,7 +31,7 @@ export class ETL_BIR extends AbstractETL {
 		return (birServices && birServices?.searchApiUrl?.length) ? birServices.searchApiUrl : undefined;
 	}
 
-	private async _searchCompany(searchTxt: string): Promise<Array<Object>> {
+	private async _searchCompany(searchTxt: string): Promise<Array<Object>> | Promise<undefined> {
 		const srchValue = searchTxt;
 		try {
 			const searchApiUrl = await this.getBIRSearchURL();
@@ -39,8 +39,10 @@ export class ETL_BIR extends AbstractETL {
 				throw new Error("BIR Service URL is Invalid!");
 			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&take=20&term=';
 
-			const res = await fetch(searchURL + encodeURIComponent(srchValue));
-			let found = await res.json();
+			const res = await requestUrl({url: searchURL + encodeURIComponent(srchValue), method: 'GET'});
+			if ( !res || !res.json )
+				return undefined;
+			let found = await res.json;
 			//clean HTML tags from full and short names
 			found = found.filter(  i => i?.inn && i?.shortName ).map( item => {
 				var div = document.createElement("div");
@@ -58,7 +60,7 @@ export class ETL_BIR extends AbstractETL {
 		} catch (err) {
 			new Notice("Ошибка поиска компании...\n" + err.message, 5000);
 			console.log('Error searching company. Error is: ', err.message);
-			return [];
+			return undefined;
 		}
 	}
 
