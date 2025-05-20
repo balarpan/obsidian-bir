@@ -268,7 +268,7 @@ export default class BirPlugin extends Plugin {
 		const modified = this.etlObj.putEgrulLinkInNoteMD(origContent, pdfPath);
 		await this.app.vault.modify(activeTFile, modified);
 		
-		//OPen in active view
+		//Open in active view
 		const active_leaf = this.app.workspace.getLeaf(false);
 		if (active_leaf) {
 			await active_leaf.openFile(this.app.vault.getAbstractFileByPath(pdfPath), {state: { mode: "source" }, });
