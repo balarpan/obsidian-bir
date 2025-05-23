@@ -86,6 +86,11 @@ export class AbstractETL {
 		return ret;
 	}
 
+	async findCompaniesLinkedToPersonTaxID(taxID: string): Promise<Array<Object>> | Promise<undefined> {
+		const ret = await this._findCompaniesLinkedToPersonTaxID(taxID);
+		return ret;
+	}
+
 	// Override this
 	private async _getCompanyDataByID(birID: string): Promise<Object> {
 	}
@@ -104,5 +109,9 @@ export class AbstractETL {
 
 	// Override this
 	async getBranchesForTaxID(taxID: string): Promise<Array> {
+	}
+
+	// Override this
+	private async _findCompaniesLinkedToPersonTaxID(taxID: string): Promise<Array<Object>> | Promise<undefined> {
 	}
 }

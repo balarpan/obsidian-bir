@@ -6,6 +6,7 @@ created_on: <% tp.date.now("YYYY-MM-DD") %>
 <% (companyName  ? 'company: "' + companyName.replaceAll('"', '\\\"') + '"' : 'company:') %>
 office:
 office_country:
+taxID: <% taxID ? '"' + taxID + '"': '' %>
 record_type: personNote
 ---
 # 👤Персона <% ename %>

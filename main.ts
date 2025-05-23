@@ -47,6 +47,14 @@ export default class BirPlugin extends Plugin {
 			const taxID = meta?.frontmatter?.taxID;
 			return activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
 		}
+		const isNotePerson = () => {
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			const activeTFile = this.app.workspace.getActiveFile();
+			const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
+			const activeRecordType = meta?.frontmatter?.record_type;
+			const taxID = meta?.frontmatter?.taxID;
+			return activeRecordType && taxID && taxID.length == 12 && ['personNote'].includes(activeRecordType);
+		}
 
 		this.addCommand({
 			id: 'BIR-find-add-company',
@@ -117,6 +125,18 @@ export default class BirPlugin extends Plugin {
 				return false;
 			},
 		});
+		this.addCommand({
+			id: 'BIR-find-add-linked-to-person',
+			name: 'Найти компании, связанные с персоной',
+			checkCallback: (checking: boolean) => {
+				if (isNotePerson()) {
+					if (!checking)
+						this.findLinkedForActivePerson();
+					return true;
+				}
+				return false;
+			},
+		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new BirSettingsTab(this.app, this));
@@ -182,12 +202,12 @@ export default class BirPlugin extends Plugin {
 		const meta = activeTFile ? this.app.metadataCache.getFileCache(activeTFile) : null;
 		const activeRecordType = meta?.frontmatter?.record_type;
 		const taxID = meta?.frontmatter?.taxID;
-		const isValidView: boolean = activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
-		if (!isValidView) {
-			new Notice("Команда доступна только если в активной вкладке открыта заметка о компании c taxID и record_type='company_HQ'");
-			return;
-		}
-		return {taxid: taxID, file: activeTFile, metadata: meta, view: activeView}
+		// const isValidView: boolean = activeRecordType && taxID && taxID.length == 10 && ['company_HQ'].includes(activeRecordType);
+		// if (!isValidView) {
+		// 	new Notice("Команда доступна только если в активной вкладке открыта заметка о компании c taxID и record_type='company_HQ'");
+		// 	return;
+		// }
+		return {taxid: taxID, file: activeTFile, metadata: meta, view: activeView, recordType: activeRecordType}
   }
 
 	/** Gets company in active opened note and search branches in external registry */
@@ -277,6 +297,30 @@ export default class BirPlugin extends Plugin {
 		return true;
 	}
 
+	async findLinkedForActivePerson(view:MarkdownView|undefined): Promise<bool> {
+		const {taxid: taxID, file: activeTFile, recordType: activeRecordType} = this.getActiveNoteProp(view);
+		if (!taxID || !activeRecordType || taxID.length !== 12 || !['personNote'].includes(activeRecordType)) {
+			new Notice("Команда доступна только если в активной вкладке открыта заметка о персоне c taxID и record_type='personNote'");
+			return false;
+		}
+
+		const progress = new ProgressModal(this.app, 'Поиск..');
+		const candidates = await this.etlObj.findCompaniesLinkedToPersonTaxID(taxID);
+		progress.close();
+		if (!candidates.length) {
+			new Notice("Не найдены в доступных реестрах связанные с персоной компании");
+			return false;
+		}
+		const dlg = new SelectBranchesDlg(this.app, candidates);
+		dlg.open( async (sel) => {
+			const compObj = new CompanyRecord(this.app, this.manifest, this.settings);
+			for(const comp of sel) {
+				await compObj.AddByProperties(comp);
+			}
+		});
+		return true;
+	}
+
 	async addPersonManually() {
 		const pers = new PersonRecord(this.app, this.manifest, this.settings);
 		await pers.addManually();
@@ -357,6 +401,7 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 		const activeRecordType = meta?.frontmatter?.record_type;
 		const taxID = meta?.frontmatter?.taxID;
 		const isNoteHQ = activeRecordType && taxID && taxID.length && ['company_HQ'].includes(activeRecordType);
+		const isNotePerson = activeRecordType && taxID && taxID.length === 12 && ['personNote'].includes(activeRecordType);
 		const cmds = [
 			{name: 'Найти и добавить компанию', desc: 'Поиск организации и создание заполненной заметки', group:'Организация', disabled:false, callback: plg.findCreateCompany.bind(plg)},
 			{name: 'Найти компанию согласно выделенному тексту и добавить', desc: 'Поиск организации на основе выделенного пользователем текста', disabled: plg.getCurrentSelection().length ? false : true, callback: plg.findCreateCompanyBySelection.bind(plg)},
@@ -375,6 +420,11 @@ class ButtonModal extends SuggestModal<ButtonModalCmd> {
 			{name: 'Получить выписку ЕГРЮЛ', desc: 'Скачать выписку ЕГРЮЛ на текущую дату.',
 				disabled: !isNoteHQ,
 				callback: plg.downloadEGRULexcerpt.bind(plg)
+			},
+			{name: 'Найти связанныес персоной организации', desc: 'Найти и добавить организации, свяазнные с персоной в активной вкладке',
+				group:'Открытая заметка о персоне',
+				disabled: !isNotePerson,
+				callback: plg.findLinkedForActivePerson.bind(plg)
 			},
 		];
 		return cmds.filter( (item)=> !item.disabled );

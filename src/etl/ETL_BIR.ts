@@ -37,7 +37,7 @@ export class ETL_BIR extends AbstractETL {
 			const searchApiUrl = await this.getBIRSearchURL();
 			if (!searchApiUrl)
 				throw new Error("BIR Service URL is Invalid!");
-			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&take=20&term=';
+			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&take=40&term=';
 
 			const res = await requestUrl({url: searchURL + encodeURIComponent(srchValue), method: 'GET'});
 			if ( !res || !res.json )
@@ -227,7 +227,7 @@ export class ETL_BIR extends AbstractETL {
 			const searchApiUrl = await this.getBIRSearchURL();
 			if (!searchApiUrl)
 				throw new Error("BIR Service URL is Invalid!");
-			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&subjectType=0&take=20&term=' + taxID;
+			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&subjectType=0&take=40&term=' + taxID;
 			let searchRes = await requestUrl({url: searchURL, method: 'GET'}).json;
 			const companies = searchRes.filter((item) => ("Company" == item.objectType && stripHTMLTags(item.inn) == taxID) );
 			if (!companies.length)
@@ -238,7 +238,7 @@ export class ETL_BIR extends AbstractETL {
 				);
 
 			searchRes = await requestUrl({
-				url: searchApiUrl + '/v2/FullSearch?skip=0&subjectType=1&take=20&term=' + taxID,
+				url: searchApiUrl + '/v2/FullSearch?skip=0&subjectType=1&take=40&term=' + taxID,
 				method: 'GET'
 			}).json;
 			const candidates = searchRes.filter(
@@ -269,7 +269,7 @@ export class ETL_BIR extends AbstractETL {
 			const searchApiUrl = await this.getBIRSearchURL();
 			if (!searchApiUrl)
 				throw new Error("BIR Service URL is Invalid!");
-			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&subjectType=0&take=20&term=' + taxID;
+			const searchURL = searchApiUrl + '/v2/FullSearch?skip=0&subjectType=0&take=40&term=' + taxID;
 			let searchRes = await requestUrl({url: searchURL, method: 'GET'}).json;
 			const companies = searchRes.filter((item) => ("Company" == item.objectType && stripHTMLTags(item.inn) == taxID) );
 			if (!companies.length || companies.length === 1)
@@ -286,6 +286,14 @@ export class ETL_BIR extends AbstractETL {
 			return [];
 		}
 
+	}
+
+	async _findCompaniesLinkedToPersonTaxID(taxID: string): Promise<Array<Object>> | Promise<undefined> {
+		const companies = await this.searchCompany(taxID);
+		const companiesData = await Promise.all( companies.map( async (i) => await this.getCompanyDataByID(i.id)) );
+		if (!companiesData.filter((i) => !this.isCompanyBranch(i)).length)
+			return [];
+		return companiesData;
 	}
 }
 

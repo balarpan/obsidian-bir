@@ -154,6 +154,11 @@ export class ExternalRegistry {
 		return this.egrul.downloadEGRULbyTaxID(taxID);
 	}
 
+	async findCompaniesLinkedToPersonTaxID(taxID: string): Promise<Array<Object>> | Promise<undefined> {
+		const ret = this.etl.findCompaniesLinkedToPersonTaxID(taxID);
+		return ret;
+	}
+
 	/** Note: Company without 'ОКОПФ' record is treated as HQ (not a branch, etc.) */
 	private isCompanyBranch(compData: Object): boolean {
 		const branchOKOPF = ['30001', '30002', '30003', '30004'];

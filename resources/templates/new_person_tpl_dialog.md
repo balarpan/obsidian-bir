@@ -70,6 +70,7 @@ created_on: <% tp.date.now("YYYY-MM-DD") %>
 <% (cSelected.name ? 'company: "' + cSelected.name + '"': 'company:') %>
 office:
 office_country:
+taxID:
 record_type: personNote
 ---
 # 👤Персона <% ename %>
